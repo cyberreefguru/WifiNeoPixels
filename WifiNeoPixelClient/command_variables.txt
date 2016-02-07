@@ -1,0 +1,20 @@
+	uint8_t command;
+
+	uint8_t fps;
+	uint8_t updateTime;
+
+	uint8_t pattern;
+	uint32_t onColor;
+	uint32_t offColor;
+	uint16_t repeat;
+	uint8_t direction;
+	uint32_t onTime;
+	uint32_t offTime;
+	uint8_t clearAfter;
+	uint8_t clearEnd;
+	uint32_t bounceTime;
+	uint8_t fadeIncrement;
+	uint32_t fadeTime;
+	uint32_t duration;
+	uint8_t glitterProbability;
+	uint8_t numOn;
