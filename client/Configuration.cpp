@@ -7,25 +7,33 @@
 
 #include "Configuration.h"
 
+const static char* defaultSsid = DEFAULT_SSID;
+const static char* defaultPassword = DEFAULT_PASSWORD;
+const static char* defaultServer = DEFAULT_SERVER;
+const static char* defaultChannelAll = DEFAULT_CHANNEL_ALL;
+const static char* defaultChannelMy = DEFAULT_CHANNEL_MY;
+const static char* defaultChannelResp = DEFAULT_CHANNEL_RESP;
+
+//const char* ssid = "*";
+//const char* password = "*";
+//const char* mqtt_server = "192.168.1.3";
+
 Configuration::Configuration()
 {
-	version = DEFAULT_VERSION;
-	nodeId = DEFAULT_NODE_ID;
-	numberNodes = DEFAULT_NUMBER_NODES;
-	crc = 0;
+	initializeVariables();
 }
 
 uint8_t Configuration::initialize()
 {
 	uint8_t flag = false;
 
-	EEPROM.begin(16);
+	EEPROM.begin(FLASH_SIZE);
 
-	Serial.println(F("Reading client configuration...."));
+	Serial.print(F("Reading client configuration...."));
 	flag = read();
 	if( flag)
 	{
-		Serial.print(F("Read Configuration; checking version..."));
+		Serial.print(F("checking version..."));
 		if( getVersion() == DEFAULT_VERSION )
 		{
 			Serial.print(F("version matches: "));
@@ -37,18 +45,24 @@ uint8_t Configuration::initialize()
 		}
 		Serial.println( getVersion(), HEX );
 	}
+	else
+	{
+		Serial.println(F("**ERROR - unable to read configuration."));
+	}
 
 	if( !flag )
 	{
-		Serial.println(F("General error reading configuration; initializing..."));
+		Serial.print(F("Initializing configuration..."));
+		initializeVariables();
+		Serial.print(F("writing..."));
 		flag = write();
 		if( flag )
 		{
-			Serial.println(F("Successfully Initialized."));
+			Serial.println(F("SUCCESS!"));
 		}
 		else
 		{
-			Serial.println(F("**Error initializing configuration."));
+			Serial.println(F("**FAILURE!"));
 		}
 	}
 
@@ -78,16 +92,6 @@ void Configuration::setVersion(uint8_t version)
 	this->version = version;
 }
 
-uint8_t Configuration::getNumberNodes()
-{
-	return numberNodes;
-}
-
-void Configuration::setNumberNodes(uint8_t numberNodes)
-{
-	this->numberNodes = numberNodes;
-}
-
 uint8_t Configuration::getCrc()
 {
 	return crc;
@@ -98,17 +102,91 @@ void Configuration::setCrc(uint8_t crc)
 	this->crc = crc;
 }
 
+const uint8_t* Configuration::getAllChannel() const
+{
+	return allChannel;
+}
+
+void Configuration::setAllChannel(uint8_t *b)
+{
+	strcpy( (char *)allChannel, (char *)b );
+}
+
+const uint8_t* Configuration::getMyChannel() const
+{
+	return myChannel;
+}
+
+void Configuration::setMyChannel(uint8_t *b)
+{
+	strcpy( (char *)myChannel, (char *)b );
+}
+
+const uint8_t* Configuration::getMyResponseChannel() const
+{
+	return myResponseChannel;
+}
+
+void Configuration::setMyResponseChannel(uint8_t *b)
+{
+	strcpy( (char *)myResponseChannel, (char *)b );
+}
+
+const uint8_t* Configuration::getServerAddress() const
+{
+	return serverAddress;
+}
+
+void Configuration::setServerAddress(uint8_t *b)
+{
+	strcpy( (char *)serverAddress, (char *)b );
+}
+
+const uint8_t* Configuration::getSsid() const
+{
+	return ssid;
+}
+
+void Configuration::setSsid(uint8_t *b)
+{
+	strcpy( (char *)ssid, (char *)b );
+}
+
+
+const uint8_t* Configuration::getPassword() const
+{
+	return password;
+}
+
+void Configuration::setPassword(uint8_t *b)
+{
+	strcpy( (char *)password, (char *)b );
+}
 
 void Configuration::dump()
 {
-	Serial.println(F("Client Configuration:"));
-	Serial.print(F("Version     : "));
+	Serial.println(F("\nClient Configuration:"));
+	Serial.print(F("Version         : "));
 	Serial.println(version, HEX);
-	Serial.print(F("Node ID     : "));
+	Serial.print(F("Node ID         : "));
 	Serial.println(nodeId, HEX);
-	Serial.print(F("Number Nodes: "));
-	Serial.println(numberNodes);
-	Serial.print(F("CRC         : "));
+	Serial.print(F("WIFI Tries      : "));
+	Serial.println(wifiTries);
+
+	Serial.print(F("SSID            : "));
+	printBlock( ssid, STRING_SIZE );
+	Serial.print(F("Password        : "));
+	printBlock( password, STRING_SIZE );
+	Serial.print(F("Server Address  : "));
+	printBlock( serverAddress, STRING_SIZE );
+	Serial.print(F("All Channel     : "));
+	printBlock( allChannel, STRING_SIZE );
+	Serial.print(F("My Channel      : "));
+	printBlock( myChannel, STRING_SIZE );
+	Serial.print(F("Response Channel: "));
+	printBlock( myResponseChannel, STRING_SIZE );
+
+	Serial.print(F("CRC             : "));
 	Serial.println(crc, HEX);
 }
 
@@ -124,12 +202,33 @@ uint8_t Configuration::read()
 
 	version = EEPROM.read(address++);
 	nodeId = EEPROM.read(address++);;
-	numberNodes = EEPROM.read(address++);
+	wifiTries = EEPROM.read(address++);;
+
+	readBlock( ssid, (uint8_t *)address, STRING_SIZE );
+	address += STRING_SIZE;
+	readBlock( password, (uint8_t *)address, STRING_SIZE );
+	address += STRING_SIZE;
+	readBlock( serverAddress, (uint8_t *)address, STRING_SIZE );
+	address += STRING_SIZE;
+	readBlock( allChannel, (uint8_t *)address, STRING_SIZE );
+	address += STRING_SIZE;
+	readBlock( myChannel, (uint8_t *)address, STRING_SIZE );
+	address += STRING_SIZE;
+	readBlock(myResponseChannel, (uint8_t *)address, STRING_SIZE );
+	address += STRING_SIZE;
+
 	crc = EEPROM.read(address++);;
 
 	checksum = computeChecksum((uint8_t *)&version, CRC_SIZE);
-
-	flag = (checksum == crc);
+	if( checksum == crc )
+	{
+		flag = true;
+	}
+	else
+	{
+		flag = false;
+		Serial.println("CRC FAILED");
+	}
 
 	return flag;
 
@@ -141,13 +240,27 @@ uint8_t Configuration::read()
 uint8_t Configuration::write()
 {
 	uint8_t flag = false;
-	uint16_t address = CONFIG_START_ADDRESS;
+	int address = CONFIG_START_ADDRESS;
 
 	crc = computeChecksum((uint8_t *)&version, CRC_SIZE);
+
 	EEPROM.write(address++, version);
 	EEPROM.write(address++, nodeId);
-	EEPROM.write(address++, numberNodes);
+	EEPROM.write(address++, wifiTries);
+	writeBlock( (uint8_t *)address, ssid, STRING_SIZE );
+	address += STRING_SIZE;
+	writeBlock( (uint8_t *)address, password, STRING_SIZE );
+	address += STRING_SIZE;
+	writeBlock( (uint8_t *)address, serverAddress, STRING_SIZE );
+	address += STRING_SIZE;
+	writeBlock( (uint8_t *)address, allChannel, STRING_SIZE );
+	address += STRING_SIZE;
+	writeBlock( (uint8_t *)address, myChannel, STRING_SIZE );
+	address += STRING_SIZE;
+	writeBlock( (uint8_t *)address, myResponseChannel, STRING_SIZE );
+	address += STRING_SIZE;
 	EEPROM.write(address, crc);
+
 	if( !EEPROM.commit() )
 	{
 		Serial.println("**ERROR - failed to commit to flash");
@@ -165,7 +278,64 @@ uint8_t Configuration::write()
 
 }
 
+void Configuration::readBlock(uint8_t *d, uint8_t *s, uint8_t len)
+{
+	for(uint8_t i=0; i<len; i++)
+	{
+		d[i] = EEPROM.read((int)&s[i]);;
+	}
+}
 
+
+void Configuration::writeBlock(uint8_t *d, uint8_t *s, uint8_t len )
+{
+	for(uint8_t i=0; i<len; i++)
+	{
+		EEPROM.write( (int)&d[i], (uint8_t)s[i]);
+	}
+
+}
+
+void Configuration::printBlock(uint8_t *s, uint8_t len )
+{
+	for(uint8_t i=0; i<len; i++)
+	{
+		Serial.print( (char)s[i] );
+	}
+	Serial.println();
+}
+
+uint8_t Configuration::getWifiTries() const
+{
+	return wifiTries;
+}
+
+void Configuration::setWifiTries(uint8_t wifiTries)
+{
+	this->wifiTries = wifiTries;
+}
+
+void Configuration::initializeVariables()
+{
+	version = DEFAULT_VERSION;
+	nodeId = DEFAULT_NODE_ID;
+	wifiTries = DEFAULT_WIFI_TRIES;
+
+	memset(ssid, 0, STRING_SIZE);
+	strcpy( (char *)ssid, defaultSsid);
+	memset(password, 0, STRING_SIZE);
+	strcpy( (char *)password, defaultPassword);
+	memset(serverAddress, 0, STRING_SIZE);
+	strcpy( (char *)serverAddress, defaultServer);
+	memset(allChannel, 0, STRING_SIZE);
+	strcpy( (char *)allChannel, defaultChannelAll);
+	memset(myChannel, 0, STRING_SIZE);
+	strcpy( (char *)myChannel, defaultChannelMy);
+	memset(myResponseChannel, 0, STRING_SIZE);
+	strcpy( (char *)myResponseChannel, defaultChannelResp);
+
+	crc = 0;
+}
 
 /**
  * Computes CRC8 using data provided.
@@ -192,3 +362,4 @@ uint8_t Configuration::computeChecksum(uint8_t *data, uint8_t len)
 	}
 	return crc;
 }
+

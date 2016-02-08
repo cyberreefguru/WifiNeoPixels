@@ -7,56 +7,34 @@
 #define __LED_STRING
 #define __ESP8266
 
-//#define __LED_STRIP
-//#define __NEOPIXELBUS
-
 #include "WifiNeoPixelClient.h"
 
 
 // Wifi functions
-void initializeWifi();
+uint8_t initializeWifi();
 
 // mqtt functions
 void pubsubCallback(char* topic, byte* payload, unsigned int length);
 void connectQueue();
-
-// led functions
-void testLeds();
-#ifdef __NEOPIXELBUS
-RgbColor red = RgbColor(COLOR_SATURATION, 0, 0);
-//RgbColor green = RgbColor(0, COLOR_SATURATION, 0);
-//RgbColor blue = RgbColor(0, 0, COLOR_SATURATION);
-//RgbColor white = RgbColor(COLOR_SATURATION);
-RgbColor black = RgbColor(0);
-
-//HslColor hslRed( red );
-//HslColor hslGreen( green );
-//HslColor hslBlue( blue );
-//HslColor hslWhite( white );
-//HslColor hslBlack( black );
-#endif
-
 
 // internal functions
 boolean isCommandAvailable();
 void setCommandAvailable(boolean flag);
 void parseCommand();
 void commandMode();
+void waitForConfig();
+void readString(uint8_t *b);
 
 // wifi variables
-const char* ssid = "*";
-const char* password = "*";
-const char* mqtt_server = "192.168.1.3";
+//const char* ssid = "*";
+//const char* password = "*";
+//const char* mqtt_server = "192.168.1.3";
 WiFiClient wifi;
 
 // mqtt variables
 PubSubClient pubsub(wifi);
 
 // led variables
-#ifdef __NEOPIXELBUS
-NeoPixelBus strip = NeoPixelBus(LED_COUNT, LED_PIN, NEO_RGB);
-#endif
-
 NeopixelWrapper controller = NeopixelWrapper();
 
 // Internal variables
@@ -79,19 +57,41 @@ void setup()
 
 	// Basic HW setup
 	pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
-	heartbeat = millis();
+	digitalWrite(BUILTIN_LED, LOW);
+	delay(2000);
+	digitalWrite(BUILTIN_LED, HIGH);
+	delay(2000);
+	digitalWrite(BUILTIN_LED, LOW);
+	delay(2000);
+
+	Serial.println("Default Configuration:");
+	config.dump();
+
+	Serial.println("\nInitializing configuration...");
+    if( config.initialize() )
+    {
+        Serial.println("\nConfiguration initialized.");
+    }
+    else
+    {
+    	Serial.println("\n**ERROR - failed to initialize configuration");
+    	Helper::error(ERROR_CONFIG);
+    }
 
 	// Initialize wifi
-	initializeWifi();
+	if( !initializeWifi() )
+	{
+		waitForConfig();
+	}
 
 	// Set up mqtt server
-	pubsub.setServer(mqtt_server, 1883);
+	pubsub.setServer( (const char *)config.getServerAddress(), 1883);
 	pubsub.setCallback(pubsubCallback);
 
 	if (controller.initialize(NUM_PIXELS, DEFAULT_INTENSITY) == false)
 	{
 		Serial.println(F("\nERROR - failed to configure LED module"));
-//		Helper::error( ERROR_DRIVER );
+		Helper::error( ERROR_DRIVER );
 	}
 	else
 	{
@@ -107,22 +107,11 @@ void setup()
 		Serial.println(F("LED Module Configured."));
 	}
 
-    // initialize LEDs
-#ifdef __NEOPIXELBUS
-    strip.Begin();
-    strip.Show();
-#endif
-
-    if( config.initialize() )
-    {
-        Serial.println("Initialized internal memory.");
-    }
-    else
-    {
-    	Serial.println("**ERROR - failed to initialize internal memory");
-    }
-
     Serial.println("** Initialization Complete **");
+	heartbeat = millis();
+
+	digitalWrite(BUILTIN_LED, HIGH);
+
 }
 
 /**
@@ -166,6 +155,7 @@ void commandMode()
 {
 	uint8_t id = 0;
 	uint8_t flag = 1;
+	uint8_t b[STRING_SIZE+2];
 
 	// Read first character - discard since it just gets us into command mode
 	char c = toupper(Serial.read());
@@ -174,8 +164,13 @@ void commandMode()
 	{
 		Serial.println(F("\nCOMMAND MODE:"));
 		Serial.println(F("C - Change Node ID"));
+		Serial.println(F("I - Change Server IP"));
+		Serial.println(F("S - Change SSID"));
+		Serial.println(F("P - Change Password"));
 		Serial.println(F("D - Dump Configuration"));
-		Serial.println(F("E - exit"));
+		Serial.println(F("D - Dump Configuration"));
+		Serial.println(F("E - Save to Flash and Exit"));
+		Serial.println(F("Q - Quit Without Saving to Flash"));
 		while(!Serial.available() )
 		{
 			// process mqtt info
@@ -197,7 +192,7 @@ void commandMode()
 			if( id >= '0' && id <= '9' )
 			{
 				config.setVersion( DEFAULT_VERSION );
-				config.setNodeId( id );
+				config.setNodeId( id-'0' );
 				if( config.write() )
 				{
 					Serial.println(F("Node ID accepted."));
@@ -213,6 +208,30 @@ void commandMode()
 				Serial.println(id);
 			}
 			break;
+		case 'I':
+			Serial.print(F("** Change Server Address**\nCurrent Address: "));
+			Serial.println( (char *)config.getServerAddress() );
+			Serial.print(F("\nPlease enter the new server address > "));
+			readString( (uint8_t *)config.getServerAddress() );
+			Serial.print("\nRead: ");
+			Serial.println( (char *)config.getServerAddress() ) ;
+			break;
+		case 'S':
+			Serial.print(F("** Change SSID **\nCurrent SSID: "));
+			Serial.println( (char *)config.getSsid() );
+			Serial.print(F("\nPlease enter the new SSID > "));
+			readString( (uint8_t *)config.getSsid() );
+			Serial.print("\nRead: ");
+			Serial.println( (char *)config.getSsid() ) ;
+			break;
+		case 'P':
+			Serial.print(F("** Change Password **\nCurrent Password: "));
+			Serial.println( (char *)config.getPassword() );
+			Serial.print(F("\nPlease enter the new password > "));
+			readString( (uint8_t *)config.getPassword() );
+			Serial.print("\nRead: ");
+			Serial.println( (char *)config.getPassword() ) ;
+			break;
 		case 'D':
 			Serial.println(F("\n** WIFI Configuration **"));
 			WiFi.printDiag(Serial);
@@ -220,6 +239,17 @@ void commandMode()
 			config.dump();
 			break;
 		case 'E':
+			if( config.write() )
+			{
+				Serial.println("\nSaved configuration!\nExiting command mode...");
+				flag = 0;
+			}
+			else
+			{
+				Serial.println("\nERROR - unable to write configuration.");
+			}
+			break;
+		case 'Q':
 			flag = 0;
 			Serial.println("\nExiting command mode.");
 			break;
@@ -228,6 +258,67 @@ void commandMode()
 
 }
 
+
+void readString(uint8_t *b)
+{
+	uint8_t flag = 0;
+	uint8_t c = 0;
+	uint8_t i = 0;
+
+	while (!flag)
+	{
+		while(!Serial.available() ){}
+		c = Serial.read();
+		if( c == '\r' || c == '\n')
+		{
+			b[i] = 0;
+			flag = true;
+		}
+		else
+		{
+			b[i++] = c;
+			Serial.print( (char)c ); // echo what the user typed
+		}
+	}
+
+	while( Serial.available() )
+	{
+		Serial.read();
+		Serial.println("Discarding character.");
+	}
+
+}
+
+void waitForConfig()
+{
+	uint8_t count = 0;
+	uint8_t flag = 1;
+
+	// Read first character - discard since it just gets us into command mode
+	char c = toupper(Serial.read());
+
+	while( flag )
+	{
+		Helper::toggleLed(50);
+		if( Serial.available() )
+		{
+			while(Serial.available() )
+			{
+			 Serial.read();
+			}
+			commandMode();
+			if( initializeWifi() )
+			{
+				flag = true;
+				break;
+			}
+			else
+			{
+				Helper::error(ERROR_WIRELESS);
+			}
+		}
+	}
+}
 
 
 /**
@@ -409,31 +500,47 @@ uint8_t commandDelay(uint32_t time)
  * Initializes WIFI on the ESP8266
  *
  */
-void initializeWifi()
+uint8_t initializeWifi()
 {
+
+	uint8_t flag = false;
+	uint8_t count = 0;
+
 #ifdef __DEBUG
 	Serial.println(F("Initializing WIFI:"));
 	Serial.print(F("Connecting to "));
-	Serial.print(ssid);
+	Serial.print((char *)config.getSsid() );
 #endif
 
-	delay(10);
 	// We start by connecting to a WiFi network
-	WiFi.begin(ssid, password);
+	WiFi.begin( (char *)config.getSsid(), (char *)config.getPassword());
 
-	while (WiFi.status() != WL_CONNECTED)
+	while( count < config.getWifiTries() )
 	{
-		delay(500);
-#ifdef __DEBUG
-		Serial.print(".");
-#endif
+		if( WiFi.status() == WL_CONNECTED )
+		{
+			flag = true;
+			break;
+		}
+		else
+		{
+			count += 1;
+			Serial.print(".");
+			delay(500);
+		}
 	}
 
-#ifdef __DEBUG
-	Serial.println(F("\n\rSuccess! WiFi connected."));
-	Serial.print(F("IP address: "));
-	Serial.println(WiFi.localIP());
-#endif
+	if( flag )
+	{
+		Serial.print(F("- SUCCESS!\n\rConnected: "));
+		Serial.println(WiFi.localIP());
+	}
+	else
+	{
+		Serial.print(F("- FAILED!"));
+	}
+
+	return flag;
 }
 
 /**
@@ -475,6 +582,8 @@ void pubsubCallback(char* topic, byte* payload, unsigned int length)
  */
 void connectQueue()
 {
+	// TODO - set max loop value before entering config
+
 	// Loop until we're reconnected
 	while (!pubsub.connected())
 	{

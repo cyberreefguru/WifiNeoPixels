@@ -34,7 +34,7 @@ void Helper::error(uint8_t errorCode)
 			Helper::toggleLed(100);
 			break;
 		case ERROR_DRIVER:
-			Helper::toggleLed(250);
+			Helper::toggleLed(300);
 			break;
 		case ERROR_GENERAL:
 			Helper::toggleLed(500);

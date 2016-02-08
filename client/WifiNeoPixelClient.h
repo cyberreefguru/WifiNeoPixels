@@ -14,9 +14,11 @@
 #include "Command.h"
 #include "NeoPixelWrapper.h"
 #include "Configuration.h"
+#include "Helper.h"
 
 
-#define NUM_PIXELS 50
+
+#define NUM_PIXELS 4
 #define HALF NUM_PIXELS/2
 
 uint8_t commandDelay(uint32_t time);
