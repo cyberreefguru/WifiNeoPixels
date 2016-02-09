@@ -15,14 +15,15 @@ uint8_t initializeWifi();
 
 // mqtt functions
 void pubsubCallback(char* topic, byte* payload, unsigned int length);
-void connectQueue();
+uint8_t connectQueue();
 
 // internal functions
 boolean isCommandAvailable();
 void setCommandAvailable(boolean flag);
 void parseCommand();
 void commandMode();
-void waitForConfig();
+void waitForWifiConfig();
+void waitForQueueConfig();
 void readString(uint8_t *b);
 
 // wifi variables
@@ -64,9 +65,6 @@ void setup()
 	digitalWrite(BUILTIN_LED, LOW);
 	delay(2000);
 
-	Serial.println("Default Configuration:");
-	config.dump();
-
 	Serial.println("\nInitializing configuration...");
     if( config.initialize() )
     {
@@ -81,7 +79,7 @@ void setup()
 	// Initialize wifi
 	if( !initializeWifi() )
 	{
-		waitForConfig();
+		waitForWifiConfig();
 	}
 
 	// Set up mqtt server
@@ -123,7 +121,10 @@ void loop()
 	// check if we are connected to mqtt server
 	if (!pubsub.connected())
 	{
-		connectQueue();
+		if( !connectQueue() )
+		{
+			waitForQueueConfig();
+		}
 	}
 
 	// process mqtt info
@@ -155,10 +156,13 @@ void commandMode()
 {
 	uint8_t id = 0;
 	uint8_t flag = 1;
-	uint8_t b[STRING_SIZE+2];
+	char c;
 
 	// Read first character - discard since it just gets us into command mode
-	char c = toupper(Serial.read());
+	while(Serial.available() )
+	{
+		c = Serial.read();
+	}
 
 	while( flag )
 	{
@@ -167,7 +171,6 @@ void commandMode()
 		Serial.println(F("I - Change Server IP"));
 		Serial.println(F("S - Change SSID"));
 		Serial.println(F("P - Change Password"));
-		Serial.println(F("D - Dump Configuration"));
 		Serial.println(F("D - Dump Configuration"));
 		Serial.println(F("E - Save to Flash and Exit"));
 		Serial.println(F("Q - Quit Without Saving to Flash"));
@@ -253,22 +256,36 @@ void commandMode()
 			flag = 0;
 			Serial.println("\nExiting command mode.");
 			break;
+		default:
+			break;
 		}
 	}
 
 }
 
-
+/**
+ * Reads a string from the serial port.  Reads until \n or \r encountered.
+ *
+ */
 void readString(uint8_t *b)
 {
-	uint8_t flag = 0;
+	uint8_t flag = false;
 	uint8_t c = 0;
 	uint8_t i = 0;
 
 	while (!flag)
 	{
-		while(!Serial.available() ){}
+		// wait until character is available
+		while(!Serial.available() )
+		{
+			// process mqtt info
+			pubsub.loop();
+			yield();
+		}
+
+		// read character
 		c = Serial.read();
+		// test for termination
 		if( c == '\r' || c == '\n')
 		{
 			b[i] = 0;
@@ -281,6 +298,7 @@ void readString(uint8_t *b)
 		}
 	}
 
+	// Reading addition characters if they are there
 	while( Serial.available() )
 	{
 		Serial.read();
@@ -289,13 +307,20 @@ void readString(uint8_t *b)
 
 }
 
-void waitForConfig()
+/**
+ * Waits in "error" mode until the user enters command mode and
+ * configures the node.
+ *
+ */
+void waitForWifiConfig()
 {
-	uint8_t count = 0;
 	uint8_t flag = 1;
 
-	// Read first character - discard since it just gets us into command mode
-	char c = toupper(Serial.read());
+	// Read characters - discard since it just gets us into command mode
+	while(Serial.available() )
+	{
+	 Serial.read();
+	}
 
 	while( flag )
 	{
@@ -316,6 +341,36 @@ void waitForConfig()
 			{
 				Helper::error(ERROR_WIRELESS);
 			}
+		}
+	}
+}
+
+/**
+ * Waits in "error" mode until the user enters command mode and
+ * configures the node.
+ *
+ */
+void waitForQueueConfig()
+{
+	uint8_t flag = false;
+
+	// Read characters - discard since it just gets us into command mode
+	while(Serial.available() )
+	{
+	 Serial.read();
+	}
+
+	while( !flag )
+	{
+		Helper::toggleLed(50);
+		if( Serial.available() )
+		{
+			while(Serial.available() )
+			{
+				Serial.read();
+			}
+			commandMode();
+			flag = true;
 		}
 	}
 }
@@ -506,11 +561,9 @@ uint8_t initializeWifi()
 	uint8_t flag = false;
 	uint8_t count = 0;
 
-#ifdef __DEBUG
 	Serial.println(F("Initializing WIFI:"));
 	Serial.print(F("Connecting to "));
 	Serial.print((char *)config.getSsid() );
-#endif
 
 	// We start by connecting to a WiFi network
 	WiFi.begin( (char *)config.getSsid(), (char *)config.getPassword());
@@ -532,12 +585,12 @@ uint8_t initializeWifi()
 
 	if( flag )
 	{
-		Serial.print(F("- SUCCESS!\n\rConnected: "));
+		Serial.print(F(".SUCCESS!\n\rConnected: "));
 		Serial.println(WiFi.localIP());
 	}
 	else
 	{
-		Serial.print(F("- FAILED!"));
+		Serial.print(F(".FAILED!"));
 	}
 
 	return flag;
@@ -580,82 +633,59 @@ void pubsubCallback(char* topic, byte* payload, unsigned int length)
  * Connects to MQTT to server
  *
  */
-void connectQueue()
+uint8_t connectQueue()
 {
-	// TODO - set max loop value before entering config
+	uint8_t count = 0;
+	uint8_t flag = false;
 
-	// Loop until we're reconnected
-	while (!pubsub.connected())
+	// Loop until we're reconnected or "timeout"
+	while( count < config.getMqttTries() )
 	{
-#ifdef __DEBUG
-		Serial.print(F("Attempting MQTT connection..."));
-#endif
-		// Attempt to connect
-		if (pubsub.connect("ESP8266Client"))
+		if( !pubsub.connected() )
 		{
-#ifdef __DEBUG
-			Serial.println(F("connected. announcing presence.."));
-#endif
-			// Once connected, publish an announcement...
-			pubsub.publish("crg/led/reg", "hello world");
-			// subscribe to channels
-			pubsub.subscribe("crg/led/all");
-#ifdef __DEBUG
-			Serial.println("Listening on 'all' channel.");
-#endif
-		}
+			Serial.print(F("Attempting queue connection..."));
+
+			// Attempt to connect
+			if (pubsub.connect("ESP8266Client"))
+			{
+				Serial.println(F("connected!"));
+
+				// subscribe to channels
+				// TODO: use all channel
+				// TODO: use my channel
+				pubsub.subscribe("crg/led/all");
+
+				// Once connected, publish an announcement...
+				Serial.println(F("Announcing presence."));
+				// TODO: use my response channel
+				pubsub.publish("crg/led/reg", "hello world");
+
+				flag = true;
+				break;
+			}
+			else
+			{
+				Serial.print(F("failed! rc="));
+				Serial.print(pubsub.state());
+				Serial.println(F(" - try again in 1/2 second"));
+				// Wait 500 ms before retrying
+				delay(500);
+			}
+
+			count += 1;
+
+		} // end if !connected
 		else
 		{
-#ifdef __DEBUG
-			Serial.print(F("failed, rc="));
-			Serial.print(pubsub.state());
-			Serial.println(F(" try again in 5 seconds"));
-#endif
-			// Wait 5 seconds before retrying
-			delay(5000);
+			flag = true;
 		}
+
+	} // end while
+
+	if( !flag )
+	{
+		Serial.println("**ERROR - unable to bind to queue.");
 	}
-}
 
-
-void testLeds()
-{
-//    // set the colors,
-//    // if they don't match in order, you may need to use NEO_GRB flag
-//    strip.SetPixelColor(0, red);
-//    strip.SetPixelColor(1, green);
-//    strip.SetPixelColor(2, blue);
-//    strip.SetPixelColor(3, white);
-//    strip.Show();
-//
-//
-//    delay(3000);
-//
-//    // turn off the pixels
-//    strip.SetPixelColor(0, black);
-//    strip.SetPixelColor(1, black);
-//    strip.SetPixelColor(2, black);
-//    strip.SetPixelColor(3, black);
-//    strip.Show();
-//
-//    delay(1000);
-//
-//    // set the colors,
-//    // if they don't match in order, you may need to use NEO_GRB flag
-//    strip.SetPixelColor(0, hslRed);
-//    strip.SetPixelColor(1, hslGreen);
-//    strip.SetPixelColor(2, hslBlue);
-//    strip.SetPixelColor(3, hslWhite);
-//    strip.Show();
-//
-//
-//    delay(3000);
-//
-//    // turn off the pixels
-//    strip.SetPixelColor(0, hslBlack);
-//    strip.SetPixelColor(1, hslBlack);
-//    strip.SetPixelColor(2, hslBlack);
-//    strip.SetPixelColor(3, hslBlack);
-//    strip.Show();
-
+	return flag;
 }

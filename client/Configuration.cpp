@@ -163,6 +163,28 @@ void Configuration::setPassword(uint8_t *b)
 	strcpy( (char *)password, (char *)b );
 }
 
+uint8_t Configuration::getWifiTries() const
+{
+	return wifiTries;
+}
+
+void Configuration::setWifiTries(uint8_t wifiTries)
+{
+	this->wifiTries = wifiTries;
+}
+
+
+uint8_t Configuration::getMqttTries() const
+{
+	return mqttTries;
+}
+
+void Configuration::setMqttTries(uint8_t tries)
+{
+	this->mqttTries = tries;
+}
+
+
 void Configuration::dump()
 {
 	Serial.println(F("\nClient Configuration:"));
@@ -172,6 +194,8 @@ void Configuration::dump()
 	Serial.println(nodeId, HEX);
 	Serial.print(F("WIFI Tries      : "));
 	Serial.println(wifiTries);
+	Serial.print(F("MQTT Tries      : "));
+	Serial.println(mqttTries);
 
 	Serial.print(F("SSID            : "));
 	printBlock( ssid, STRING_SIZE );
@@ -203,6 +227,7 @@ uint8_t Configuration::read()
 	version = EEPROM.read(address++);
 	nodeId = EEPROM.read(address++);;
 	wifiTries = EEPROM.read(address++);;
+	mqttTries = EEPROM.read(address++);;
 
 	readBlock( ssid, (uint8_t *)address, STRING_SIZE );
 	address += STRING_SIZE;
@@ -247,6 +272,7 @@ uint8_t Configuration::write()
 	EEPROM.write(address++, version);
 	EEPROM.write(address++, nodeId);
 	EEPROM.write(address++, wifiTries);
+	EEPROM.write(address++, mqttTries);
 	writeBlock( (uint8_t *)address, ssid, STRING_SIZE );
 	address += STRING_SIZE;
 	writeBlock( (uint8_t *)address, password, STRING_SIZE );
@@ -305,21 +331,12 @@ void Configuration::printBlock(uint8_t *s, uint8_t len )
 	Serial.println();
 }
 
-uint8_t Configuration::getWifiTries() const
-{
-	return wifiTries;
-}
-
-void Configuration::setWifiTries(uint8_t wifiTries)
-{
-	this->wifiTries = wifiTries;
-}
-
 void Configuration::initializeVariables()
 {
 	version = DEFAULT_VERSION;
 	nodeId = DEFAULT_NODE_ID;
 	wifiTries = DEFAULT_WIFI_TRIES;
+	mqttTries = DEFAULT_MQTT_TRIES;
 
 	memset(ssid, 0, STRING_SIZE);
 	strcpy( (char *)ssid, defaultSsid);

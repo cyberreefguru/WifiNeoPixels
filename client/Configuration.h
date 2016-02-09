@@ -16,11 +16,12 @@
 #define CONFIG_V2				0x02
 #define CONFIG_V3				0x03
 
-#define DEFAULT_VERSION			CONFIG_V2
+#define DEFAULT_VERSION			CONFIG_V3
 #define DEFAULT_NODE_ID			'1'
 #define DEFAULT_NUMBER_NODES	0x06
 
 #define DEFAULT_WIFI_TRIES		20
+#define DEFAULT_MQTT_TRIES		20
 
 #define DEFAULT_SSID			"ssid"
 #define DEFAULT_PASSWORD		"password"
@@ -32,7 +33,7 @@
 
 #define STRING_SIZE				20
 #define FLASH_SIZE				150
-#define CRC_SIZE				123
+#define CRC_SIZE				124
 
 class Configuration
 {
@@ -44,8 +45,12 @@ public:
 	void setVersion(uint8_t v);
 	uint8_t getNodeId();
 	void setNodeId(uint8_t v);
+
 	uint8_t getWifiTries() const;
 	void setWifiTries(uint8_t wifiTries);
+
+	uint8_t getMqttTries() const;
+	void setMqttTries(uint8_t tries);
 
 	const uint8_t* getAllChannel() const;
 	void setAllChannel(uint8_t *b);
@@ -78,6 +83,7 @@ protected:
 	uint8_t version;
 	uint8_t nodeId;
 	uint8_t wifiTries;
+	uint8_t mqttTries;
 	uint8_t ssid[STRING_SIZE];
 	uint8_t password[STRING_SIZE];
 	uint8_t serverAddress[STRING_SIZE];
