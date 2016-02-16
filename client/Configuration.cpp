@@ -7,22 +7,19 @@
 
 #include "Configuration.h"
 
-const static char* defaultSsid = DEFAULT_SSID;
-const static char* defaultPassword = DEFAULT_PASSWORD;
-const static char* defaultServer = DEFAULT_SERVER;
-const static char* defaultChannelAll = DEFAULT_CHANNEL_ALL;
-const static char* defaultChannelMy = DEFAULT_CHANNEL_MY;
-const static char* defaultChannelResp = DEFAULT_CHANNEL_RESP;
-
-//const char* ssid = "*";
-//const char* password = "*";
-//const char* mqtt_server = "192.168.1.3";
-
+/**
+ * Constructor
+ *
+ */
 Configuration::Configuration()
 {
 	initializeVariables();
 }
 
+/**
+ * Initializes the structure; returns false if failure during initialization
+ *
+ */
 uint8_t Configuration::initialize()
 {
 	uint8_t flag = false;
@@ -42,6 +39,7 @@ uint8_t Configuration::initialize()
 		else
 		{
 			Serial.print(F("version mismatch: "));
+			flag = false;
 		}
 		Serial.println( getVersion(), HEX );
 	}
@@ -80,6 +78,11 @@ uint8_t Configuration::getNodeId()
 void Configuration::setNodeId(uint8_t nodeId)
 {
 	this->nodeId = nodeId;
+
+	memset(myChannel, 0, STRING_SIZE);
+	sprintf((char *)myChannel, DEFAULT_CHANNEL_MY, nodeId );
+	memset(myResponseChannel, 0, STRING_SIZE);
+	sprintf((char *)myResponseChannel, DEFAULT_CHANNEL_RESP, nodeId );
 }
 
 uint8_t Configuration::getVersion()
@@ -110,6 +113,16 @@ const uint8_t* Configuration::getAllChannel() const
 void Configuration::setAllChannel(uint8_t *b)
 {
 	strcpy( (char *)allChannel, (char *)b );
+}
+
+const uint8_t* Configuration::getRegistrationChannel() const
+{
+	return regChannel;
+}
+
+void Configuration::setRegistrationChannel(uint8_t *b)
+{
+	strcpy( (char *)regChannel, (char *)b );
 }
 
 const uint8_t* Configuration::getMyChannel() const
@@ -205,6 +218,8 @@ void Configuration::dump()
 	printBlock( serverAddress, STRING_SIZE );
 	Serial.print(F("All Channel     : "));
 	printBlock( allChannel, STRING_SIZE );
+	Serial.print(F("Reg Channel     : "));
+	printBlock( regChannel, STRING_SIZE );
 	Serial.print(F("My Channel      : "));
 	printBlock( myChannel, STRING_SIZE );
 	Serial.print(F("Response Channel: "));
@@ -236,6 +251,8 @@ uint8_t Configuration::read()
 	readBlock( serverAddress, (uint8_t *)address, STRING_SIZE );
 	address += STRING_SIZE;
 	readBlock( allChannel, (uint8_t *)address, STRING_SIZE );
+	address += STRING_SIZE;
+	readBlock( regChannel, (uint8_t *)address, STRING_SIZE );
 	address += STRING_SIZE;
 	readBlock( myChannel, (uint8_t *)address, STRING_SIZE );
 	address += STRING_SIZE;
@@ -280,6 +297,8 @@ uint8_t Configuration::write()
 	writeBlock( (uint8_t *)address, serverAddress, STRING_SIZE );
 	address += STRING_SIZE;
 	writeBlock( (uint8_t *)address, allChannel, STRING_SIZE );
+	address += STRING_SIZE;
+	writeBlock( (uint8_t *)address, regChannel, STRING_SIZE );
 	address += STRING_SIZE;
 	writeBlock( (uint8_t *)address, myChannel, STRING_SIZE );
 	address += STRING_SIZE;
@@ -339,17 +358,31 @@ void Configuration::initializeVariables()
 	mqttTries = DEFAULT_MQTT_TRIES;
 
 	memset(ssid, 0, STRING_SIZE);
-	strcpy( (char *)ssid, defaultSsid);
+//	strcpy( (char *)ssid, defaultSsid);
+	sprintf( (char *)ssid, "%s", DEFAULT_SSID );
+
 	memset(password, 0, STRING_SIZE);
-	strcpy( (char *)password, defaultPassword);
+	sprintf( (char *)password, "%s", DEFAULT_PASSWORD );
+//	strcpy( (char *)password, defaultPassword);
+
 	memset(serverAddress, 0, STRING_SIZE);
-	strcpy( (char *)serverAddress, defaultServer);
+	sprintf( (char *)serverAddress, "%s", DEFAULT_SERVER );
+//	strcpy( (char *)serverAddress, defaultServer);
+
 	memset(allChannel, 0, STRING_SIZE);
-	strcpy( (char *)allChannel, defaultChannelAll);
+	sprintf( (char *)allChannel, "%s", DEFAULT_CHANNEL_ALL );
+//	strcpy( (char *)allChannel, defaultChannelAll);
+
+	memset(regChannel, 0, STRING_SIZE);
+	sprintf( (char *)regChannel, "%s", DEFAULT_CHANNEL_REG );
+
 	memset(myChannel, 0, STRING_SIZE);
-	strcpy( (char *)myChannel, defaultChannelMy);
+	sprintf((char *)myChannel, DEFAULT_CHANNEL_MY, nodeId );
+//	strcpy( (char *)myChannel, defaultChannelMy);
+
 	memset(myResponseChannel, 0, STRING_SIZE);
-	strcpy( (char *)myResponseChannel, defaultChannelResp);
+	sprintf((char *)myResponseChannel, DEFAULT_CHANNEL_RESP, nodeId );
+//	strcpy( (char *)myResponseChannel, defaultChannelResp);
 
 	crc = 0;
 }

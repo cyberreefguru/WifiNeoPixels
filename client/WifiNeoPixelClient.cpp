@@ -27,9 +27,6 @@ void waitForQueueConfig();
 void readString(uint8_t *b);
 
 // wifi variables
-//const char* ssid = "*";
-//const char* password = "*";
-//const char* mqtt_server = "192.168.1.3";
 WiFiClient wifi;
 
 // mqtt variables
@@ -41,7 +38,6 @@ NeopixelWrapper controller = NeopixelWrapper();
 // Internal variables
 static volatile uint8_t commandAvailable = false;
 static volatile uint8_t commandBuffer[CMD_BUFFER_SIZE];
-static volatile uint8_t nodeId = 0x01;
 static uint32_t heartbeat = 0;
 static Configuration config;
 
@@ -492,16 +488,20 @@ void parseCommand()
 			char b[100];
 			StaticJsonBuffer<100> jsonBuffer;
 			JsonObject& root = jsonBuffer.createObject();
+
 			// Our command is "complete"
 			root[KEY_CMD] = CMD_COMPLETE;
+
 			// Who is complete
-			root[KEY_ID] = nodeId;
-			// What command is complete
-			root[KEY_CMD_RESPONSE] = cmd.getCommand();
+			root[KEY_NODE_ID] = config.getNodeId();
+
+			// What unique id of command that was complete
+			root[KEY_UNIQUE_ID] = cmd.getUniqueId();
+
 			// Status of command (SUCCESS/FAIL)
 			root[KEY_STATUS] = STATUS_SUCCESS;
 			root.printTo(b, sizeof(b));
-			pubsub.publish("crg/led/all", b);
+			pubsub.publish((char *)config.getMyResponseChannel(), b);
 		}
 	} // end if cmd parse = true
 
@@ -651,14 +651,15 @@ uint8_t connectQueue()
 				Serial.println(F("connected!"));
 
 				// subscribe to channels
-				// TODO: use all channel
-				// TODO: use my channel
-				pubsub.subscribe("crg/led/all");
+				pubsub.subscribe( (char *)config.getAllChannel() );
+				pubsub.subscribe( (char *)config.getMyChannel() );
 
 				// Once connected, publish an announcement...
-				Serial.println(F("Announcing presence."));
-				// TODO: use my response channel
-				pubsub.publish("crg/led/reg", "hello world");
+				Serial.print(F("Announcing presence: "));
+				Serial.println( (char *)config.getMyChannel() );
+
+				// Tell controller we're listening
+				pubsub.publish((char *)config.getRegistrationChannel(), (char *)config.getMyChannel() );
 
 				flag = true;
 				break;

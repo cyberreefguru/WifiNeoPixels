@@ -23,6 +23,7 @@ Command::Command()
 void Command::initialize()
 {
 	command = CMD_ERROR;
+	uniqueId = 0;
 	notifyOnComplete = false;
 	framesPerSecond = DEFAULT_FPS;
 	updateTime = 0;
@@ -76,6 +77,15 @@ uint8_t Command::parse(uint8_t* b)
 #endif
 		command = obj[KEY_CMD].as<uint8_t>();
 
+		uniqueId = obj[KEY_UNIQUE_ID].as<long>();
+		printf("UID: %uld::%s", uniqueId, obj[KEY_UNIQUE_ID].asString());
+//		Serial.print("UID: ");
+//		Serial.print( uniqueId );
+//		Serial.print("::");
+//		Serial.println(  );
+
+		nodeId = obj[KEY_NODE_ID].as<uint8_t>();
+
 		notifyOnComplete = obj[KEY_NOTIFY_ON_COMPLETE].as<uint8_t>();
 		show = obj[KEY_SHOW].as<uint8_t>();
 
@@ -102,6 +112,7 @@ uint8_t Command::parse(uint8_t* b)
 
 		fadeIncrement = obj[KEY_FADE_INCREMENT].as<uint8_t>();
 
+
 		status = true;
 	}
 
@@ -113,6 +124,9 @@ void Command::dump()
 #ifdef __DEBUG
 	Serial.print("command: ");
 	Serial.print( command, HEX );
+	printf(", uid: %uld", uniqueId);
+	Serial.print(", nodeId: ");
+	Serial.print( nodeId, HEX );
 	Serial.print(", notifyOncomplete: ");
 	Serial.print( notifyOnComplete );
 	Serial.print(", show: ");
@@ -157,6 +171,36 @@ void Command::dump()
 	Serial.println( fadeIncrement );
 
 #endif
+}
+
+uint8_t Command::getCommand() const
+{
+	return command;
+}
+
+void Command::setCommand(uint8_t command)
+{
+	this->command = command;
+}
+
+uint32_t Command::getUniqueId() const
+{
+	return uniqueId;
+}
+
+void Command::setUniqueId(uint32_t uniqueId)
+{
+	this->uniqueId = uniqueId;
+}
+
+uint8_t Command::getNodeId() const
+{
+	return nodeId;
+}
+
+void Command::setNodeId(uint8_t nodeId)
+{
+	this->nodeId = nodeId;
 }
 
 uint8_t Command::getShow() const
@@ -209,16 +253,6 @@ uint8_t Command::getClearEnd() const
 void Command::setClearEnd(uint8_t clearEnd)
 {
 	this->clearEnd = clearEnd;
-}
-
-uint8_t Command::getCommand() const
-{
-	return command;
-}
-
-void Command::setCommand(uint8_t command)
-{
-	this->command = command;
 }
 
 uint8_t Command::getDirection() const

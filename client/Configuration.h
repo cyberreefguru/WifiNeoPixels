@@ -10,6 +10,7 @@
 
 #include <Arduino.h>
 #include <EEPROM.h>
+#include <string.h>
 
 #define CONFIG_START_ADDRESS	0x00
 #define CONFIG_V1				0x01
@@ -17,7 +18,7 @@
 #define CONFIG_V3				0x03
 
 #define DEFAULT_VERSION			CONFIG_V3
-#define DEFAULT_NODE_ID			'1'
+#define DEFAULT_NODE_ID			1
 #define DEFAULT_NUMBER_NODES	0x06
 
 #define DEFAULT_WIFI_TRIES		20
@@ -27,13 +28,14 @@
 #define DEFAULT_PASSWORD		"password"
 #define DEFAULT_SERVER			"192.168.1.3"
 #define DEFAULT_CHANNEL_ALL		"crg/led/all"
-#define DEFAULT_CHANNEL_MY		"crg/led/node/"
-#define DEFAULT_CHANNEL_RESP	"crg/led/resp/"
+#define DEFAULT_CHANNEL_REG		"crg/led/reg"
+#define DEFAULT_CHANNEL_MY		"crg/led/node/%u"
+#define DEFAULT_CHANNEL_RESP	"crg/led/resp/%u"
 
 
 #define STRING_SIZE				20
 #define FLASH_SIZE				150
-#define CRC_SIZE				124
+#define CRC_SIZE				144
 
 class Configuration
 {
@@ -54,6 +56,9 @@ public:
 
 	const uint8_t* getAllChannel() const;
 	void setAllChannel(uint8_t *b);
+
+	const uint8_t* getRegistrationChannel() const;
+	void setRegistrationChannel(uint8_t *b);
 
 	const uint8_t* getMyChannel() const;
 	void setMyChannel(uint8_t *b);
@@ -88,6 +93,7 @@ protected:
 	uint8_t password[STRING_SIZE];
 	uint8_t serverAddress[STRING_SIZE];
 	uint8_t allChannel[STRING_SIZE];
+	uint8_t regChannel[STRING_SIZE];
 	uint8_t myChannel[STRING_SIZE];
 	uint8_t myResponseChannel[STRING_SIZE];
 	uint8_t crc;

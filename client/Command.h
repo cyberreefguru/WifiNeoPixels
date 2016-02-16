@@ -37,12 +37,15 @@
 #define KEY_BOUNCE_TIME				"bt"
 #define KEY_FADE_TIME				"ft"
 #define KEY_FADE_INCREMENT			"fi"
-#define KEY_CMD_RESPONSE			"cr"
+//#define KEY_CMD_RESPONSE			"cr"
 #define KEY_STATUS					"st"
-#define KEY_ID						"id"
+#define KEY_NODE_ID					"nid"
+//#define KEY_CMD_ID					"cid"
 #define KEY_INTENSITY				"i"
 #define KEY_INDEX					"idx"
 #define KEY_SHOW					"s"
+#define KEY_UNIQUE_ID				"uid"
+
 
 
 // Basic Functions
@@ -98,6 +101,12 @@ public:
 	uint8_t getCommand() const;
 	void setCommand(uint8_t command);
 
+	uint32_t getUniqueId() const;
+	void setUniqueId(uint32_t uid);
+
+	uint8_t getNodeId() const;
+	void setNodeId(uint8_t nodeId);
+
 	uint8_t getIndex() const;
 	void setIndex(uint8_t index);
 	uint8_t getShow() const;
@@ -148,6 +157,9 @@ public:
 
 private:
 	uint8_t command;
+	uint32_t uniqueId;
+	uint8_t nodeId;
+
 	uint8_t notifyOnComplete;
 	uint8_t show;
 
