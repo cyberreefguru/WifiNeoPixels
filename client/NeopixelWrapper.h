@@ -94,8 +94,8 @@ protected:
 //	uint8_t sparkleCount;
 //	uint8_t frameWaitTime;
 	uint8_t gHueUpdateTime;
-	uint8_t maxIntensity;
-	uint8_t maxFps;
+//	uint8_t maxIntensity;
+//	uint8_t maxFps;
 
 	void setPixel(int16_t index, CRGB color);
 	void setPatternTimed(int16_t index, uint8_t pattern, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime, uint8_t clearAfter);

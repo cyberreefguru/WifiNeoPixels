@@ -17,11 +17,11 @@
 NeopixelWrapper::NeopixelWrapper()
 {
 	leds = 0;
-	maxIntensity = DEFAULT_INTENSITY;
+//	maxIntensity = DEFAULT_INTENSITY;
 //	intensity = DEFAULT_INTENSITY;
 	gHue = 0;
 //	sparkleCount = 0;
-	maxFps = DEFAULT_FPS;
+//	maxFps = DEFAULT_FPS;
 //	frameWaitTime = 1000/DEFAULT_FPS;
 	gHueUpdateTime = 20;
 }
@@ -66,7 +66,7 @@ CRGB NeopixelWrapper::getPixel(int16_t index)
     	Serial.print(color, HEX);
     	Serial.println(F("-SKIPPING"));
 #endif
-    	return NULL;
+    	return 0;
 	}
 }
 
@@ -164,7 +164,7 @@ void NeopixelWrapper::fill(CRGB color, uint8_t show)
 {
 	if( FastLED.getBrightness() == 0)
 	{
-		FastLED.setBrightness( maxIntensity );
+		FastLED.setBrightness( DEFAULT_INTENSITY );
 	}
 	for (uint8_t i = 0; i < FastLED.size(); i++)
     {
@@ -386,28 +386,6 @@ void NeopixelWrapper::scrollPattern(uint8_t pattern, uint8_t direction, CRGB onC
 		}
 
 	} // end for j
-
-//	// custom move window
-//	// set off first
-//	// set off when done if requested
-//
-//	fill(offColor, true);
-//	if( direction == LEFT)
-//	{
-//		for(int16_t i=-7; i<FastLED.size(); i++)
-//		{
-//			setPatternTimed(i, pattern, onColor, offColor, onTime, offTime, clearAfter);
-//			if(isCommandAvailable()) return;
-//		}
-//	}
-//	else if (direction == RIGHT )
-//	{
-//		for(int16_t i=FastLED.size()-1; i>=-8; i--)
-//		{
-//			setPatternTimed(i, pattern, onColor, offColor, onTime, offTime, clearAfter);
-//			if(isCommandAvailable()) return;
-//		}
-//	}
 
 	if( clearEnd )
 	{
@@ -764,34 +742,6 @@ void NeopixelWrapper::confetti(uint32_t runTime, CRGB color, uint8_t fadeBy, uin
     }
 
 } // end confetti
-
-
-///**
-// * Creates random speckles of the specified color.  Nearly the same as
-// * confetti but fewer simulateous LEDs
-// *
-// */
-//void NeoPixelWrapper::sparkle(CRGB color, uint8_t sparkles)
-//{
-//  while(isCommandAvailable() == false )
-//  {
-//      sparkleCount++;
-//      fadeToBlackBy(leds, FastLED.size(), 5);
-//      if( sparkleCount > sparkles )
-//      {
-//          int index = random16(FastLED.size());
-//          while( leds[index] != (CRGB)CRGB::Black )
-//          {
-//              index = random16(FastLED.size());
-//          }
-//          leds[index] = color;
-//          sparkleCount=0;
-//      }
-//      FastLED.show();
-//      FastLED.delay( frameWaitTime );
-//  }
-//}
-
 
 
 /**

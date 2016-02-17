@@ -79,10 +79,6 @@ uint8_t Command::parse(uint8_t* b)
 
 		uniqueId = obj[KEY_UNIQUE_ID].as<long>();
 		printf("UID: %uld::%s", uniqueId, obj[KEY_UNIQUE_ID].asString());
-//		Serial.print("UID: ");
-//		Serial.print( uniqueId );
-//		Serial.print("::");
-//		Serial.println(  );
 
 		nodeId = obj[KEY_NODE_ID].as<uint8_t>();
 
