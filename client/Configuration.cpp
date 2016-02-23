@@ -85,6 +85,17 @@ void Configuration::setNodeId(uint8_t nodeId)
 	sprintf((char *)myResponseChannel, DEFAULT_CHANNEL_RESP, nodeId );
 }
 
+uint8_t Configuration::getNumberLeds()
+{
+	return numberLeds;
+}
+
+void Configuration::setNumberLeds(uint8_t numberLeds)
+{
+	this->numberLeds = numberLeds;
+}
+
+
 uint8_t Configuration::getVersion()
 {
 	return version;
@@ -205,6 +216,8 @@ void Configuration::dump()
 	Serial.println(version, HEX);
 	Serial.print(F("Node ID         : "));
 	Serial.println(nodeId, HEX);
+	Serial.print(F("Number LEDs     : "));
+	Serial.println(numberLeds);
 	Serial.print(F("WIFI Tries      : "));
 	Serial.println(wifiTries);
 	Serial.print(F("MQTT Tries      : "));
@@ -241,6 +254,7 @@ uint8_t Configuration::read()
 
 	version = EEPROM.read(address++);
 	nodeId = EEPROM.read(address++);;
+	numberLeds = EEPROM.read(address++);;
 	wifiTries = EEPROM.read(address++);;
 	mqttTries = EEPROM.read(address++);;
 
@@ -288,6 +302,7 @@ uint8_t Configuration::write()
 
 	EEPROM.write(address++, version);
 	EEPROM.write(address++, nodeId);
+	EEPROM.write(address++, numberLeds);
 	EEPROM.write(address++, wifiTries);
 	EEPROM.write(address++, mqttTries);
 	writeBlock( (uint8_t *)address, ssid, STRING_SIZE );
@@ -354,6 +369,7 @@ void Configuration::initializeVariables()
 {
 	version = DEFAULT_VERSION;
 	nodeId = DEFAULT_NODE_ID;
+	numberLeds = DEFAULT_NUMBER_LEDS;
 	wifiTries = DEFAULT_WIFI_TRIES;
 	mqttTries = DEFAULT_MQTT_TRIES;
 
@@ -412,4 +428,3 @@ uint8_t Configuration::computeChecksum(uint8_t *data, uint8_t len)
 	}
 	return crc;
 }
-

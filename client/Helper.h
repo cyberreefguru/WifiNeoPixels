@@ -22,7 +22,22 @@ public:
 	static void error(uint8_t error);
 	static void dumpBuffer(uint8_t *buf, uint8_t len);
 	static void toggleLed(uint32_t time);
-
+	static uint8_t readString(uint8_t *b, uint8_t len);
 };
+
+
+//end of add your includes here
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+extern void worker();
+extern uint8_t isCommandAvailable();
+extern uint8_t commandDelay(uint32_t time);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif /* HELPER_H_ */

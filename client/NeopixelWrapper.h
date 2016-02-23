@@ -57,6 +57,7 @@ class NeopixelWrapper
 public:
 	NeopixelWrapper();
 	boolean initialize(uint8_t numLeds, uint8_t intensity);
+	boolean reinitialize(uint8_t numLeds, uint8_t intensity);
 
 	void setFramesPerSecond(uint8_t fps);
 	uint8_t getFramesPerSecond();

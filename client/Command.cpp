@@ -73,15 +73,12 @@ uint8_t Command::parse(uint8_t* b)
 	else
 	{
 #ifdef __DEBUG
-	Serial.println("Successful parse; pulling values...");
+		Serial.println("Successful parse; pulling values...");
 #endif
+
 		command = obj[KEY_CMD].as<uint8_t>();
-
 		uniqueId = obj[KEY_UNIQUE_ID].as<long>();
-		printf("UID: %uld::%s", uniqueId, obj[KEY_UNIQUE_ID].asString());
-
 		nodeId = obj[KEY_NODE_ID].as<uint8_t>();
-
 		notifyOnComplete = obj[KEY_NOTIFY_ON_COMPLETE].as<uint8_t>();
 		show = obj[KEY_SHOW].as<uint8_t>();
 
@@ -108,8 +105,8 @@ uint8_t Command::parse(uint8_t* b)
 
 		fadeIncrement = obj[KEY_FADE_INCREMENT].as<uint8_t>();
 
-
 		status = true;
+
 	}
 
 	return status;

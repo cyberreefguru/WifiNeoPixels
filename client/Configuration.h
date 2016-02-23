@@ -12,14 +12,21 @@
 #include <EEPROM.h>
 #include <string.h>
 
+//#include "WifiWrapper.h"
+//#include "PubSubWrapper.h"
+//#include "NeoPixelWrapper.h"
+//#include "Menu.h"
+
 #define CONFIG_START_ADDRESS	0x00
 #define CONFIG_V1				0x01
 #define CONFIG_V2				0x02
 #define CONFIG_V3				0x03
 
-#define DEFAULT_VERSION			CONFIG_V3
+#define DEFAULT_VERSION			CONFIG_V1
 #define DEFAULT_NODE_ID			1
+
 #define DEFAULT_NUMBER_NODES	0x06
+#define DEFAULT_NUMBER_LEDS		10
 
 #define DEFAULT_WIFI_TRIES		20
 #define DEFAULT_MQTT_TRIES		20
@@ -35,7 +42,7 @@
 
 #define STRING_SIZE				20
 #define FLASH_SIZE				150
-#define CRC_SIZE				144
+#define CRC_SIZE				145
 
 class Configuration
 {
@@ -45,8 +52,12 @@ public:
 
 	uint8_t getVersion();
 	void setVersion(uint8_t v);
+
 	uint8_t getNodeId();
 	void setNodeId(uint8_t v);
+
+	uint8_t getNumberLeds();
+	void setNumberLeds(uint8_t v);
 
 	uint8_t getWifiTries() const;
 	void setWifiTries(uint8_t wifiTries);
@@ -87,6 +98,7 @@ protected:
 
 	uint8_t version;
 	uint8_t nodeId;
+	uint8_t numberLeds;
 	uint8_t wifiTries;
 	uint8_t mqttTries;
 	uint8_t ssid[STRING_SIZE];

@@ -9,37 +9,17 @@
 
 #include "WifiNeoPixelClient.h"
 
+// Internal Variables
+static Configuration config;
+static NeopixelWrapper controller;
+static PubSubWrapper pubsubw;
+static WifiWrapper wifiw;
+static Menu menu;
 
-// Wifi functions
-uint8_t initializeWifi();
-
-// mqtt functions
-void pubsubCallback(char* topic, byte* payload, unsigned int length);
-uint8_t connectQueue();
-
-// internal functions
-boolean isCommandAvailable();
-void setCommandAvailable(boolean flag);
-void parseCommand();
-void commandMode();
-void waitForWifiConfig();
-void waitForQueueConfig();
-void readString(uint8_t *b);
-
-// wifi variables
-WiFiClient wifi;
-
-// mqtt variables
-PubSubClient pubsub(wifi);
-
-// led variables
-NeopixelWrapper controller = NeopixelWrapper();
-
-// Internal variables
 static volatile uint8_t commandAvailable = false;
 static volatile uint8_t commandBuffer[CMD_BUFFER_SIZE];
 static uint32_t heartbeat = 0;
-static Configuration config;
+
 
 /**
  * Arduino setup function
@@ -47,6 +27,9 @@ static Configuration config;
  */
 void setup()
 {
+	uint8_t wifiConfig = false;
+	uint8_t pubsubConfig = false;
+
 #ifdef __DEBUG
 	Serial.begin(115200);
 	Serial.println(F("\n\rESP8266 Powered Up"));
@@ -56,10 +39,13 @@ void setup()
 	pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
 	digitalWrite(BUILTIN_LED, LOW);
 	delay(2000);
+	yield();
 	digitalWrite(BUILTIN_LED, HIGH);
 	delay(2000);
+	yield();
 	digitalWrite(BUILTIN_LED, LOW);
 	delay(2000);
+	yield();
 
 	Serial.println("\nInitializing configuration...");
     if( config.initialize() )
@@ -72,36 +58,47 @@ void setup()
     	Helper::error(ERROR_CONFIG);
     }
 
-	// Initialize wifi
-	if( !initializeWifi() )
-	{
-		waitForWifiConfig();
-	}
+    // Initialize menu
+	menu.initialize(&config, &wifiw, &pubsubw, &controller);
+	wifiConfig = wifiw.initialize(&config);
+	pubsubConfig = pubsubw.initialize(&config, &wifiw, (uint8_t *)&commandBuffer[0]) ;
 
-	// Set up mqtt server
-	pubsub.setServer( (const char *)config.getServerAddress(), 1883);
-	pubsub.setCallback(pubsubCallback);
+	// Initialize WIFI
+    if( !wifiConfig )
+    {
+    	menu.waitForWifiConfig();
+    }
 
-	if (controller.initialize(NUM_PIXELS, DEFAULT_INTENSITY) == false)
+	// Set up pub/sub
+    if( !pubsubConfig )
+    {
+    	menu.waitForPubSubConfig();
+    }
+
+	// Initialize the LEDs
+	if (controller.initialize(config.getNumberLeds(), DEFAULT_INTENSITY) == false)
 	{
 		Serial.println(F("\nERROR - failed to configure LED module"));
 		Helper::error( ERROR_DRIVER );
 	}
-	else
-	{
-		Serial.print(F("\nLED Controller initialized..."));
-		controller.fill(CRGB::White, true);
-		delay(500);
-		controller.fill(CRGB::Black, true);
-		delay(500);
-		controller.fill(CRGB::Red, true);
-		delay(500);
-		controller.fill(CRGB::Black, true);
-		delay(500);
-		Serial.println(F("LED Module Configured."));
-	}
 
+	Serial.print(F("\nLED Controller initialized..."));
+	controller.fill(CRGB::White, true);
+	delay(500);
+	yield();
+	controller.fill(CRGB::Black, true);
+	delay(500);
+	yield();
+	controller.fill(CRGB::Red, true);
+	delay(500);
+	yield();
+	controller.fill(CRGB::Black, true);
+	delay(500);
+	yield();
+
+	Serial.println(F("LED Module Configured."));
     Serial.println("** Initialization Complete **");
+
 	heartbeat = millis();
 
 	digitalWrite(BUILTIN_LED, HIGH);
@@ -114,29 +111,28 @@ void setup()
  */
 void loop()
 {
+	worker();
+
 	// check if we are connected to mqtt server
-	if (!pubsub.connected())
+	if( !pubsubw.checkConnection() )
 	{
-		if( !connectQueue() )
-		{
-			waitForQueueConfig();
-		}
+		menu.waitForPubSubConfig();
 	}
 
-	// process mqtt info
-	pubsub.loop();
-	yield();
 
+	// Check if command is available
 	if( isCommandAvailable() )
 	{
 		parseCommand();
 	}
 
+	// Check if user wants to configure node
 	if( Serial.available() )
 	{
-		commandMode();
+		menu.configure();
 	}
 
+	// flash LED
 	if( heartbeat < millis() )
 	{
 		heartbeat = millis() + 500;
@@ -144,231 +140,14 @@ void loop()
 	}
 }
 
-
 /**
- * Handles serial commands and changing configuration
- */
-void commandMode()
-{
-	uint8_t id = 0;
-	uint8_t flag = 1;
-	char c;
-
-	// Read first character - discard since it just gets us into command mode
-	while(Serial.available() )
-	{
-		c = Serial.read();
-	}
-
-	while( flag )
-	{
-		Serial.println(F("\nCOMMAND MODE:"));
-		Serial.println(F("C - Change Node ID"));
-		Serial.println(F("I - Change Server IP"));
-		Serial.println(F("S - Change SSID"));
-		Serial.println(F("P - Change Password"));
-		Serial.println(F("D - Dump Configuration"));
-		Serial.println(F("E - Save to Flash and Exit"));
-		Serial.println(F("Q - Quit Without Saving to Flash"));
-		while(!Serial.available() )
-		{
-			// process mqtt info
-			pubsub.loop();
-			yield();
-		}
-
-		c = toupper(Serial.read());
-		switch( c )
-		{
-		case 'C':
-			Serial.print(F("** Change Node Id **\nCurrent ID: "));
-			Serial.println( config.getNodeId(), HEX );
-			Serial.print(F("\nPlease enter the new node ID > "));
-			while(!Serial.available() ){}
-			id = Serial.read();
-			Serial.println( (char)id ); // echo what the user typed
-			Serial.println(F("\nProcessing...\n"));
-			if( id >= '0' && id <= '9' )
-			{
-				config.setVersion( DEFAULT_VERSION );
-				config.setNodeId( id-'0' );
-				if( config.write() )
-				{
-					Serial.println(F("Node ID accepted."));
-				}
-				else
-				{
-					Serial.println(F("** ERROR - error saving configuration information."));
-				}
-			}
-			else
-			{
-				Serial.print(F("Illegal node value entered:"));
-				Serial.println(id);
-			}
-			break;
-		case 'I':
-			Serial.print(F("** Change Server Address**\nCurrent Address: "));
-			Serial.println( (char *)config.getServerAddress() );
-			Serial.print(F("\nPlease enter the new server address > "));
-			readString( (uint8_t *)config.getServerAddress() );
-			Serial.print("\nRead: ");
-			Serial.println( (char *)config.getServerAddress() ) ;
-			break;
-		case 'S':
-			Serial.print(F("** Change SSID **\nCurrent SSID: "));
-			Serial.println( (char *)config.getSsid() );
-			Serial.print(F("\nPlease enter the new SSID > "));
-			readString( (uint8_t *)config.getSsid() );
-			Serial.print("\nRead: ");
-			Serial.println( (char *)config.getSsid() ) ;
-			break;
-		case 'P':
-			Serial.print(F("** Change Password **\nCurrent Password: "));
-			Serial.println( (char *)config.getPassword() );
-			Serial.print(F("\nPlease enter the new password > "));
-			readString( (uint8_t *)config.getPassword() );
-			Serial.print("\nRead: ");
-			Serial.println( (char *)config.getPassword() ) ;
-			break;
-		case 'D':
-			Serial.println(F("\n** WIFI Configuration **"));
-			WiFi.printDiag(Serial);
-			Serial.println(F("\n** System Configuration **"));
-			config.dump();
-			break;
-		case 'E':
-			if( config.write() )
-			{
-				Serial.println("\nSaved configuration!\nExiting command mode...");
-				flag = 0;
-			}
-			else
-			{
-				Serial.println("\nERROR - unable to write configuration.");
-			}
-			break;
-		case 'Q':
-			flag = 0;
-			Serial.println("\nExiting command mode.");
-			break;
-		default:
-			break;
-		}
-	}
-
-}
-
-/**
- * Reads a string from the serial port.  Reads until \n or \r encountered.
+ * calls others functions while we are not busy
  *
  */
-void readString(uint8_t *b)
+void worker()
 {
-	uint8_t flag = false;
-	uint8_t c = 0;
-	uint8_t i = 0;
-
-	while (!flag)
-	{
-		// wait until character is available
-		while(!Serial.available() )
-		{
-			// process mqtt info
-			pubsub.loop();
-			yield();
-		}
-
-		// read character
-		c = Serial.read();
-		// test for termination
-		if( c == '\r' || c == '\n')
-		{
-			b[i] = 0;
-			flag = true;
-		}
-		else
-		{
-			b[i++] = c;
-			Serial.print( (char)c ); // echo what the user typed
-		}
-	}
-
-	// Reading addition characters if they are there
-	while( Serial.available() )
-	{
-		Serial.read();
-		Serial.println("Discarding character.");
-	}
-
-}
-
-/**
- * Waits in "error" mode until the user enters command mode and
- * configures the node.
- *
- */
-void waitForWifiConfig()
-{
-	uint8_t flag = 1;
-
-	// Read characters - discard since it just gets us into command mode
-	while(Serial.available() )
-	{
-	 Serial.read();
-	}
-
-	while( flag )
-	{
-		Helper::toggleLed(50);
-		if( Serial.available() )
-		{
-			while(Serial.available() )
-			{
-			 Serial.read();
-			}
-			commandMode();
-			if( initializeWifi() )
-			{
-				flag = true;
-				break;
-			}
-			else
-			{
-				Helper::error(ERROR_WIRELESS);
-			}
-		}
-	}
-}
-
-/**
- * Waits in "error" mode until the user enters command mode and
- * configures the node.
- *
- */
-void waitForQueueConfig()
-{
-	uint8_t flag = false;
-
-	// Read characters - discard since it just gets us into command mode
-	while(Serial.available() )
-	{
-	 Serial.read();
-	}
-
-	while( !flag )
-	{
-		Helper::toggleLed(50);
-		if( Serial.available() )
-		{
-			while(Serial.available() )
-			{
-				Serial.read();
-			}
-			commandMode();
-			flag = true;
-		}
-	}
+	pubsubw.work();
+	yield();
 }
 
 
@@ -390,7 +169,6 @@ void parseCommand()
 	if( cmd.parse( (uint8_t *)commandBuffer) )
 	{
 #ifdef __DEBUG
-		Serial.println("command parsed:");
 		cmd.dump();
 #endif
 		switch(cmd.getCommand())
@@ -501,7 +279,7 @@ void parseCommand()
 			// Status of command (SUCCESS/FAIL)
 			root[KEY_STATUS] = STATUS_SUCCESS;
 			root.printTo(b, sizeof(b));
-			pubsub.publish((char *)config.getMyResponseChannel(), b);
+			pubsubw.publish((char *)config.getMyResponseChannel(), b);
 		}
 	} // end if cmd parse = true
 
@@ -538,8 +316,7 @@ uint8_t commandDelay(uint32_t time)
 		for (uint32_t i = 0; i < time; i++)
 		{
 			delay(1);
-			pubsub.loop(); // process mqtt loop
-			yield(); // give esp8266 some time
+			worker();
 			cmd = isCommandAvailable();
 			if (cmd)
 			{
@@ -551,142 +328,15 @@ uint8_t commandDelay(uint32_t time)
 
 }
 
-/**
- * Initializes WIFI on the ESP8266
- *
- */
-uint8_t initializeWifi()
+volatile uint8_t* getCommandBuffer()
 {
-
-	uint8_t flag = false;
-	uint8_t count = 0;
-
-	Serial.println(F("Initializing WIFI:"));
-	Serial.print(F("Connecting to "));
-	Serial.print((char *)config.getSsid() );
-
-	// We start by connecting to a WiFi network
-	WiFi.begin( (char *)config.getSsid(), (char *)config.getPassword());
-
-	while( count < config.getWifiTries() )
-	{
-		if( WiFi.status() == WL_CONNECTED )
-		{
-			flag = true;
-			break;
-		}
-		else
-		{
-			count += 1;
-			Serial.print(".");
-			delay(500);
-		}
-	}
-
-	if( flag )
-	{
-		Serial.print(F(".SUCCESS!\n\rConnected: "));
-		Serial.println(WiFi.localIP());
-	}
-	else
-	{
-		Serial.print(F(".FAILED!"));
-	}
-
-	return flag;
+	return commandBuffer;
 }
 
-/**
- * Handles all "receive" messages from MQTT
- *
- * Parses the messages and sends to correct handler
- *
- */
 void pubsubCallback(char* topic, byte* payload, unsigned int length)
 {
-#ifdef __DEBUG
-	Serial.print(F("Message arrived ["));
-	Serial.print(topic);
-	Serial.print(F("] "));
-	for (uint8_t i = 0; i < length; i++)
-	{
-		Serial.print((char) payload[i]);
-	}
-	Serial.println();
-#endif
-
-	if( length <= CMD_BUFFER_SIZE )
-	{
-		memcpy( (void *)&commandBuffer, (void *)payload, length);
-		setCommandAvailable(true);
-	}
-	else
-	{
-#ifdef __DEBUG
-		Serial.println(F("ERROR - command buffer too small"));
-#endif
-	}
+	Serial.println("Calling pubsub callback...");
+	pubsubw.callback(topic, payload, length);
 
 }
 
-/**
- * Connects to MQTT to server
- *
- */
-uint8_t connectQueue()
-{
-	uint8_t count = 0;
-	uint8_t flag = false;
-
-	// Loop until we're reconnected or "timeout"
-	while( count < config.getMqttTries() )
-	{
-		if( !pubsub.connected() )
-		{
-			Serial.print(F("Attempting queue connection..."));
-
-			// Attempt to connect
-			if (pubsub.connect("ESP8266Client"))
-			{
-				Serial.println(F("connected!"));
-
-				// subscribe to channels
-				pubsub.subscribe( (char *)config.getAllChannel() );
-				pubsub.subscribe( (char *)config.getMyChannel() );
-
-				// Once connected, publish an announcement...
-				Serial.print(F("Announcing presence: "));
-				Serial.println( (char *)config.getMyChannel() );
-
-				// Tell controller we're listening
-				pubsub.publish((char *)config.getRegistrationChannel(), (char *)config.getMyChannel() );
-
-				flag = true;
-				break;
-			}
-			else
-			{
-				Serial.print(F("failed! rc="));
-				Serial.print(pubsub.state());
-				Serial.println(F(" - try again in 1/2 second"));
-				// Wait 500 ms before retrying
-				delay(500);
-			}
-
-			count += 1;
-
-		} // end if !connected
-		else
-		{
-			flag = true;
-		}
-
-	} // end while
-
-	if( !flag )
-	{
-		Serial.println("**ERROR - unable to bind to queue.");
-	}
-
-	return flag;
-}

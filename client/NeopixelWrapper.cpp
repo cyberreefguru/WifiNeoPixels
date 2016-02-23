@@ -48,6 +48,16 @@ boolean NeopixelWrapper::initialize(uint8_t numLeds, uint8_t intensity)
 }
 
 /**
+ * Re-initializes the library
+ */
+boolean NeopixelWrapper::reinitialize(uint8_t numLeds, uint8_t intensity)
+{
+	free(leds);
+	return initialize( numLeds, intensity );;
+}
+
+
+/**
  * Returns color of pixel, or null if out of bounds
  *
  */
@@ -401,6 +411,7 @@ void NeopixelWrapper::bounce(uint16_t repeat, uint8_t pattern, uint8_t direction
 	uint16_t count = 0;
 
 	// custom bounce with 0-7, n-(n-7)
+	// TODO: bounce without scrolling off the screen
 
 	while (isCommandAvailable() == false)
 	{
