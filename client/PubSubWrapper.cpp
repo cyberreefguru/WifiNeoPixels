@@ -10,23 +10,151 @@
 PubSubWrapper::PubSubWrapper()
 {
 	config = 0;
-	commandBuffer = 0;
+	jsonBuffer = 0;
 }
 
-uint8_t PubSubWrapper::initialize(Configuration* config, WifiWrapper* wifi, uint8_t* commandBuffer)
+uint8_t PubSubWrapper::initialize(Configuration* config, WifiWrapper* wifi)
 {
 	this->config = config;
-	this->commandBuffer = commandBuffer;
 	pubsub.setClient( wifi->getWifiClient() );
+
+	// Check if we are connected - if so, disconnect
+	if( pubsub.connected() )
+	{
+		disconnect();
+	}
 
 	// Set up mqtt server
 	pubsub.setServer( (const char *)config->getServerAddress(), 1883);
 	pubsub.setCallback(pubsubCallback);
 
-	connect();
+	// Check if we already allocated memory; if so, free it
+	if( jsonBuffer != 0 )
+	{
+		free(jsonBuffer);
+	}
 
-	return true;
+	// Allocate memory
+	jsonBuffer = (uint8_t *)malloc(JSON_BUFFER_SIZE);
+	if( jsonBuffer == 0 )
+	{
+		Serial.println(F("ERROR - unable to allocate json buffer memory!"));
+		return false;
+	}
+
+	return connect();
 }
+
+/**
+ * Connects to MQTT to server
+ *
+ */
+uint8_t PubSubWrapper::connect()
+{
+	uint8_t count = 0;
+	uint8_t flag = false;
+
+	if( pubsub.connected() )
+	{
+		Serial.println(F("Queue connected."));
+	}
+	else
+	{
+		Serial.print(F("Attempting queue connection..."));
+
+		// Loop until we're reconnected or "timeout"
+		while( count < config->getMqttTries() )
+		{
+			// Attempt to connect
+			if (pubsub.connect((char *)config->getMyChannel()))
+			{
+				Serial.println(F("connected!"));
+
+				// subscribe to channels
+				pubsub.subscribe( (char *)config->getAllChannel() );
+				pubsub.subscribe( (char *)config->getMyChannel() );
+
+				// Once connected, publish an announcement...
+				Serial.print(F("Announcing presence: "));
+				Serial.println( (char *)config->getMyChannel() );
+
+				// Tell controller we're listening
+				pubsub.publish((char *)config->getRegistrationChannel(), (char *)config->getMyChannel() );
+
+				flag = true;
+				break;
+			}
+			else
+			{
+				Serial.print(F("."));
+				// Wait 500 ms before retrying
+				delay(500);
+			}
+			count += 1;
+
+		} // end while
+	}
+
+	if( !flag )
+	{
+		Serial.println(F("\n**ERROR - unable to bind to queue."));
+	}
+
+	return flag;
+}
+
+/**
+ * Disconnects from MQTT server
+ *
+ */
+uint8_t PubSubWrapper::disconnect()
+{
+	uint8_t flag = false;
+
+	if( pubsub.connected() )
+	{
+		Serial.print(F("Disconnecting..."));
+		pubsub.unsubscribe( (char *)config->getAllChannel() );
+		pubsub.unsubscribe( (char *)config->getMyChannel() );
+		pubsub.disconnect();
+		Serial.println(F("success!"));
+		flag = true;
+
+	}
+	else
+	{
+		Serial.println(F("ERROR - not connected"));
+	}
+
+	return flag;
+}
+
+/**
+ * Checks if we still have a valid connection to the server.
+ * If there is no connection, an attempt will be made.
+ *
+ */
+uint8_t PubSubWrapper::checkConnection()
+{
+	uint8_t flag = pubsub.connected();
+
+	if (!flag)
+	{
+		flag = connect();
+	}
+
+	return flag;
+}
+
+/**
+ * Calls the loop function to process queue messages
+ *
+ */
+void PubSubWrapper::work()
+{
+	pubsub.loop();
+}
+
 
 /**
  * Handles all "receive" messages from MQTT
@@ -50,163 +178,44 @@ void PubSubWrapper::callback(char* topic, byte* payload, unsigned int length)
 
 	if( length <= CMD_BUFFER_SIZE )
 	{
-		memcpy( (void *)commandBuffer, (void *)payload, length);
+		// Copy payload to command buffer
+		memcpy( (void *)jsonBuffer, (void *)payload, length);
 		setCommandAvailable(true);
 	}
 	else
 	{
-#ifdef __DEBUG
 		Serial.println(F("ERROR - command buffer too small"));
-#endif
 	}
 
 }
 
 
 /**
- * Connects to MQTT to server
+ * Publishes a message to the specified channel
  *
  */
-uint8_t PubSubWrapper::connect()
-{
-	uint8_t count = 0;
-	uint8_t flag = false;
-
-	// Loop until we're reconnected or "timeout"
-	while( count < config->getMqttTries() )
-	{
-		if( !pubsub.connected() )
-		{
-			Serial.print(F("Attempting queue connection..."));
-
-			// Attempt to connect
-			if (pubsub.connect("ESP8266Client"))
-			{
-				Serial.println(F("connected!"));
-
-				// subscribe to channels
-				pubsub.subscribe( (char *)config->getAllChannel() );
-				pubsub.subscribe( (char *)config->getMyChannel() );
-
-				// Once connected, publish an announcement...
-				Serial.print(F("Announcing presence: "));
-				Serial.println( (char *)config->getMyChannel() );
-
-				// Tell controller we're listening
-				pubsub.publish((char *)config->getRegistrationChannel(), (char *)config->getMyChannel() );
-
-				flag = true;
-				break;
-			}
-			else
-			{
-				Serial.print(F("failed! rc="));
-				Serial.print(pubsub.state());
-				Serial.println(F(" - try again in 1/2 second"));
-				// Wait 500 ms before retrying
-				delay(500);
-			}
-
-			count += 1;
-
-		} // end if !connected
-		else
-		{
-			flag = true;
-		}
-
-	} // end while
-
-	if( !flag )
-	{
-		Serial.println("**ERROR - unable to bind to queue.");
-	}
-
-	return flag;
-}
-
-/**
- * Connects to MQTT to server
- *
- */
-uint8_t PubSubWrapper::disconnect()
-{
-	uint8_t flag = false;
-
-	if( pubsub.connected() )
-	{
-		Serial.print(F("Remove connections..."));
-		pubsub.unsubscribe( (char *)config->getAllChannel() );
-		pubsub.unsubscribe( (char *)config->getMyChannel() );
-		pubsub.disconnect();
-		flag = true;
-
-	} // end if connected
-
-	if( !flag )
-	{
-		Serial.println("**ERROR - unable to disconnect to queue.");
-	}
-
-	return flag;
-}
-
-uint8_t PubSubWrapper::checkConnection()
-{
-	uint8_t flag = false;
-	if (!pubsub.connected())
-	{
-		if( connect() )
-		{
-			flag = true;
-		}
-	}
-	else
-	{
-		flag = true;
-	}
-
-	return flag;
-}
-
-void PubSubWrapper::work()
-{
-	pubsub.loop();
-}
-
 void PubSubWrapper::publish(char *channel, char *buffer)
 {
 	pubsub.publish(channel, buffer);
 }
 
-
 /**
- * Waits in "error" mode until the user enters command mode and
- * configures the node.
+ * Publishes a message to the specified channel
  *
  */
-void PubSubWrapper::waitForConfig()
+void PubSubWrapper::publish(char *channel, JsonObject& obj)
 {
-	uint8_t flag = false;
+	obj.printTo((char *)jsonBuffer, JSON_BUFFER_SIZE);
+	pubsub.publish( channel, (char *)jsonBuffer );
+}
 
-	// Read characters - discard since it just gets us into command mode
-	while(Serial.available() )
-	{
-	 Serial.read();
-	}
 
-	while( !flag )
-	{
-		Helper::toggleLed(50);
-		if( Serial.available() )
-		{
-			while(Serial.available() )
-			{
-				Serial.read();
-			}
-//			commandMode();
-			flag = true;
-		}
-	}
+/**
+ * Returns a pointer to the internal buffer
+ *
+ */
+uint8_t* PubSubWrapper::getBuffer()
+{
+	return jsonBuffer;
 }
 

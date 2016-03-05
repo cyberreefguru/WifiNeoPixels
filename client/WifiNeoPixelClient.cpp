@@ -3,9 +3,6 @@
  */
 
 //#define __DEBUG
-#define __FASTLED
-#define __LED_STRING
-#define __ESP8266
 
 #include "WifiNeoPixelClient.h"
 
@@ -17,9 +14,12 @@ static WifiWrapper wifiw;
 static Menu menu;
 
 static volatile uint8_t commandAvailable = false;
-static volatile uint8_t commandBuffer[CMD_BUFFER_SIZE];
 static uint32_t heartbeat = 0;
 
+void parseCommand();
+boolean initialize();
+
+//os_timer_t myTimer;
 
 /**
  * Arduino setup function
@@ -27,13 +27,9 @@ static uint32_t heartbeat = 0;
  */
 void setup()
 {
-	uint8_t wifiConfig = false;
-	uint8_t pubsubConfig = false;
-
-#ifdef __DEBUG
+	// Configure serial port
 	Serial.begin(115200);
-	Serial.println(F("\n\rESP8266 Powered Up"));
-#endif
+	Serial.println(F("\n\rLED Controller Powered Up"));
 
 	// Basic HW setup
 	pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
@@ -59,27 +55,25 @@ void setup()
     }
 
     // Initialize menu
-	menu.initialize(&config, &wifiw, &pubsubw, &controller);
-	wifiConfig = wifiw.initialize(&config);
-	pubsubConfig = pubsubw.initialize(&config, &wifiw, (uint8_t *)&commandBuffer[0]) ;
+//	menu.initialize(&config, &wifiw, &pubsubw, &controller);
+	menu.initialize(&config);
 
-	// Initialize WIFI
-    if( !wifiConfig )
-    {
-    	menu.waitForWifiConfig();
-    }
-
-	// Set up pub/sub
-    if( !pubsubConfig )
-    {
-    	menu.waitForPubSubConfig();
-    }
-
-	// Initialize the LEDs
-	if (controller.initialize(config.getNumberLeds(), DEFAULT_INTENSITY) == false)
+	if( !initialize() )
 	{
-		Serial.println(F("\nERROR - failed to configure LED module"));
-		Helper::error( ERROR_DRIVER );
+		menu.waitForConfig();
+		if( menu.configure() )
+		{
+			if( !initialize() )
+			{
+				Serial.println(F("\nERROR - failed to initialize node."));
+				Helper::error(ERROR_GENERAL);
+			}
+		}
+		else
+		{
+			Serial.println(F("\nERROR - no changes to configuration."));
+			Helper::error(ERROR_GENERAL);
+		}
 	}
 
 	Serial.print(F("\nLED Controller initialized..."));
@@ -97,7 +91,7 @@ void setup()
 	yield();
 
 	Serial.println(F("LED Module Configured."));
-    Serial.println("** Initialization Complete **");
+    Serial.println(F("** Initialization Complete **"));
 
 	heartbeat = millis();
 
@@ -111,14 +105,9 @@ void setup()
  */
 void loop()
 {
+	uint8_t configFlag = 0;
+
 	worker();
-
-	// check if we are connected to mqtt server
-	if( !pubsubw.checkConnection() )
-	{
-		menu.waitForPubSubConfig();
-	}
-
 
 	// Check if command is available
 	if( isCommandAvailable() )
@@ -126,10 +115,18 @@ void loop()
 		parseCommand();
 	}
 
+	// check if we are connected to mqtt server
+	// TODO: this pattern was from the sample code and I'm not sure it is necessary
+	if( !pubsubw.checkConnection() )
+	{
+		menu.waitForConfig();
+		configFlag = 1;
+	}
+
 	// Check if user wants to configure node
 	if( Serial.available() )
 	{
-		menu.configure();
+		configFlag = 1;
 	}
 
 	// flash LED
@@ -138,6 +135,62 @@ void loop()
 		heartbeat = millis() + 500;
 		digitalWrite(BUILTIN_LED, !digitalRead( BUILTIN_LED ) );
 	}
+
+	// Check if we need to enter command mode to reconfigure the node
+	if( configFlag == 1)
+	{
+		configFlag = 0;
+		if( menu.configure() > 0)
+		{
+			if( !initialize() )
+			{
+				Serial.println(F("\nERROR - failed to initialize node."));
+				Helper::error(ERROR_GENERAL);
+			}
+		}
+	}
+
+} // end loop
+
+/**
+ * Initializes the node.  Returns true if node configured properly, false otherwise.
+ *
+ */
+boolean initialize()
+{
+	boolean configured = false;
+
+	Serial.println(F("Configuring node..."));
+
+	// Initialize WIFI
+	if( wifiw.initialize(&config) )
+	{
+		// Initialize pubsub
+		if( pubsubw.initialize(&config, &wifiw) )
+		{
+			// Initialize the LEDs
+			if ( controller.initialize(config.getNumberLeds(), DEFAULT_INTENSITY) )
+			{
+				Serial.println(F("Configured!"));
+				configured = true;
+			}
+			else
+			{
+				Serial.println(F("\nERROR - failed to configure LED module"));
+			}
+		}
+		else
+		{
+			Serial.println(F("\nERROR - failed to configure queue"));
+		}
+	}
+	else
+	{
+		Serial.println(F("\nERROR - failed to configure WIFI"));
+	}
+
+	return configured;
+
 }
 
 /**
@@ -166,7 +219,7 @@ void parseCommand()
 		Serial.println("parsing command");
 #endif
 
-	if( cmd.parse( (uint8_t *)commandBuffer) )
+	if( cmd.parse( (uint8_t *)pubsubw.getBuffer() ) )
 	{
 #ifdef __DEBUG
 		cmd.dump();
@@ -247,23 +300,25 @@ void parseCommand()
 			break;
 		case CMD_SET_HUE_UPDATE_TIME:
 			Serial.println(F("SET_HUE_UPDATE_TIME"));
+			controller.setHueUpdateTime( cmd.getUpdateTime() );
 			break;
-		case CMD_SET_FPS:
-			Serial.println(F("SET_FPS"));
+		case CMD_SET_INTENSITY:
+			Serial.println(F("SET_INTENSITY"));
+			controller.setIntensity( cmd.getIntensity() );
 			break;
 		case CMD_COMPLETE:
 			Serial.println(F("COMPLETE"));
 			break;
 		case CMD_ERROR:
 		default:
-			Serial.println(F("ERROR"));
+			Serial.println(F("ERROR - UNKNOWN COMMAND"));
 			break;
 		} // end switch
 
 		// Send response with the command is complete
 		if( cmd.getNotifyOnComplete() )
 		{
-			char b[100];
+			// TODO: figure out better way to handle this buffer size
 			StaticJsonBuffer<100> jsonBuffer;
 			JsonObject& root = jsonBuffer.createObject();
 
@@ -278,8 +333,7 @@ void parseCommand()
 
 			// Status of command (SUCCESS/FAIL)
 			root[KEY_STATUS] = STATUS_SUCCESS;
-			root.printTo(b, sizeof(b));
-			pubsubw.publish((char *)config.getMyResponseChannel(), b);
+			pubsubw.publish( (char *)config.getMyResponseChannel(), root);
 		}
 	} // end if cmd parse = true
 
@@ -328,14 +382,9 @@ uint8_t commandDelay(uint32_t time)
 
 }
 
-volatile uint8_t* getCommandBuffer()
-{
-	return commandBuffer;
-}
-
 void pubsubCallback(char* topic, byte* payload, unsigned int length)
 {
-	Serial.println("Calling pubsub callback...");
+//	Serial.println("Calling pubsub callback...");
 	pubsubw.callback(topic, payload, length);
 
 }

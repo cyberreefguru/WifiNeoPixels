@@ -10,19 +10,20 @@
 Menu::Menu()
 {
 	this->config = 0;
-	this->wifi = 0;
-	this->pubsub = 0;
-	this->controller = 0;
+//	this->wifi = 0;
+//	this->pubsub = 0;
+//	this->controller = 0;
 }
 
-uint8_t Menu::initialize(Configuration* config, WifiWrapper* wifi, PubSubWrapper* pubsub, NeopixelWrapper* controller)
+//uint8_t Menu::initialize(Configuration* config, WifiWrapper* wifi, PubSubWrapper* pubsub, NeopixelWrapper* controller)
+uint8_t Menu::initialize(Configuration* config)
 {
 	uint8_t flag = false;
 
 	this->config = config;
-	this->wifi = wifi;
-	this->pubsub = pubsub;
-	this->controller = controller;
+//	this->wifi = wifi;
+//	this->pubsub = pubsub;
+//	this->controller = controller;
 	flag = true;
 
 	return flag;
@@ -32,21 +33,21 @@ uint8_t Menu::initialize(Configuration* config, WifiWrapper* wifi, PubSubWrapper
  * Uses stdout/stdin to configure the node
  *
  */
-void Menu::configure()
+uint8_t Menu::configure()
 {
-	uint8_t id = 0;
+	uint8_t b[INPUT_BUFFER_SIZE];
+	int16_t id = 0;
 	uint8_t flag = 1;
-	char c;
-	uint8_t buf[4];
+	uint8_t changed = 0;
+	uint8_t saved = 0;
+	int8_t c = 0;
 
-	// Read first character - discard since it just gets us into command mode
-	while (Serial.available())
-	{
-		c = Serial.read();
-	}
+	// Read and discard input data since it just gets us into command mode
+	Helper::readAll();
 
 	while (flag)
 	{
+		// Print menu
 		Serial.println(F("\nCOMMAND MODE:"));
 		Serial.println(F("C - Change Node ID"));
 		Serial.println(F("L - Number of LEDs"));
@@ -54,90 +55,96 @@ void Menu::configure()
 		Serial.println(F("S - Change SSID"));
 		Serial.println(F("P - Change Password"));
 		Serial.println(F("D - Dump Configuration"));
-		Serial.println(F("E - Save to Flash and Exit"));
-		Serial.println(F("Q - Quit Without Saving to Flash"));
-		while (!Serial.available())
-		{
-			worker();
-		}
+		Serial.println(F("E - Save to Flash"));
+		Serial.println(F("Q - Quit"));
 
-		c = toupper(Serial.read());
-		switch (c)
+		c = toupper( Helper::readChar(false) );
+		switch ( c )
 		{
 		case 'C':
 			Serial.print(F("** Change Node Id **\nCurrent ID: "));
 			Serial.println(config->getNodeId(), HEX);
-			Serial.print(F("\nPlease enter the new node ID > "));
-			while (!Serial.available())
+			Serial.print(F("\nPlease enter the new node ID (1-255) > "));
+			id = Helper::readInt(b, INPUT_BUFFER_SIZE);
+			if (id > 0 && id <= 255)
 			{
-			}
-			id = Serial.read();
-			Serial.println((char) id); // echo what the user typed
-			Serial.println(F("\nProcessing...\n"));
-			if (id >= '0' && id <= '9')
-			{
-				config->setVersion( DEFAULT_VERSION);
-				config->setNodeId(id - '0');
-				pubsub->disconnect();
-				//disconnectPubSub();
-				if (config->write())
-				{
-					Serial.println(F("Node ID accepted."));
-				}
-				else
-				{
-					Serial.println(F("** ERROR - error saving configuration information."));
-				}
+				config->setNodeId( id );
+				Serial.print(F("\nNodeID: "));
+				Serial.println(config->getNodeId(), HEX);
+				changed = 1;
 			}
 			else
 			{
-				Serial.print(F("Illegal node value entered:"));
+				Serial.print(F("\nERROR - illegal node value entered: "));
 				Serial.println(id);
 			}
 			break;
 		case 'L':
 			Serial.print(F("** Change Number of LEDs**\nCurrent Number: "));
 			Serial.println(config->getNumberLeds());
-			Serial.print(F("\nPlease enter the new number (1-256) > "));
-			Helper::readString(buf, 6);
-			id = (uint8_t) atoi((char *) buf);
-			Serial.print("Read: ");
-			Serial.println(id);
-
-			if (id > 0 && id <= 256)
+			Serial.print(F("\nPlease enter the new number (1-255) > "));
+			id = Helper::readInt(b, INPUT_BUFFER_SIZE);
+			if (id > 0 && id <= 255)
 			{
 				config->setNumberLeds(id);
-				controller->reinitialize(config->getNumberLeds(), DEFAULT_INTENSITY);
+				Serial.print(F("\nNumber of LEDs: "));
+				Serial.println(config->getNumberLeds());
+				changed = 1;
+				//controller->initialize(config->getNumberLeds(), DEFAULT_INTENSITY);
 			}
 			else
 			{
-				Serial.println("**Error converting input to a valid number");
+				Serial.print(F("\nERROR - illegal value entered: "));
+				Serial.println(id);
 			}
-
 			break;
 		case 'I':
 			Serial.print(F("** Change Server Address**\nCurrent Address: "));
 			Serial.println((char *) config->getServerAddress());
 			Serial.print(F("\nPlease enter the new server address > "));
-			Helper::readString((uint8_t *) config->getServerAddress(), STRING_SIZE);
-			Serial.print("Read: ");
-			Serial.println((char *) config->getServerAddress());
+			if( Helper::readString(b, INPUT_BUFFER_SIZE) > 0 )
+			{
+				memcpy( (char *)config->getServerAddress(), (char *)b, INPUT_BUFFER_SIZE );
+				Serial.print(F("\nServer Address: "));
+				Serial.println((char *) config->getServerAddress());
+				changed = 1;
+			}
+			else
+			{
+				Serial.print(F("\nNo change!"));
+			}
 			break;
 		case 'S':
 			Serial.print(F("** Change SSID **\nCurrent SSID: "));
 			Serial.println((char *) config->getSsid());
 			Serial.print(F("\nPlease enter the new SSID > "));
-			Helper::readString((uint8_t *) config->getSsid(), STRING_SIZE);
-			Serial.print("Read: ");
-			Serial.println((char *) config->getSsid());
+			if( Helper::readString(b, INPUT_BUFFER_SIZE) > 0 )
+			{
+				memcpy( (char *)config->getSsid(), (char *)b, INPUT_BUFFER_SIZE );
+				Serial.print(F("\nSSID: "));
+				Serial.println((char *) config->getSsid());
+				changed = 1;
+			}
+			else
+			{
+				Serial.print(F("\nNo change!"));
+			}
 			break;
 		case 'P':
 			Serial.print(F("** Change Password **\nCurrent Password: "));
 			Serial.println((char *) config->getPassword());
 			Serial.print(F("\nPlease enter the new password > "));
-			Helper::readString((uint8_t *) config->getPassword(), STRING_SIZE);
-			Serial.print("Read: ");
-			Serial.println((char *) config->getPassword());
+			if( Helper::readString(b, INPUT_BUFFER_SIZE) > 0 )
+			{
+				memcpy( (char *)config->getPassword(), (char *)b, INPUT_BUFFER_SIZE );
+				Serial.print(F("\nPassword: "));
+				Serial.println((char *) config->getPassword());
+				changed = 1;
+			}
+			else
+			{
+				Serial.print(F("\nNo change!"));
+			}
 			break;
 		case 'D':
 			Serial.println(F("\n** WIFI Configuration **"));
@@ -148,92 +155,73 @@ void Menu::configure()
 		case 'E':
 			if (config->write())
 			{
-				Serial.println("\nSaved configuration!\nExiting command mode...");
-				flag = 0;
+				Serial.println(F("\nSaved configuration!"));
+				saved = 1;
 			}
 			else
 			{
-				Serial.println("\nERROR - unable to write configuration.");
+				Serial.println(F("\nERROR - unable to write configuration."));
 			}
 			break;
 		case 'Q':
+			// Check if we have unsaved changes
+			if( changed == 1 && saved == 0 )
+			{
+				Serial.println("Unsaved changes! Save now (Y/N)? ");
+
+				c = toupper( Helper::readChar(false) );
+				if( c == 'Y' )
+				{
+					if (config->write())
+					{
+						Serial.println(F("\nSaved configuration!"));
+						saved = 1;
+					}
+					else
+					{
+						Serial.println(F("\nERROR - unable to write configuration."));
+					}
+				}
+				else
+				{
+					Serial.println(F("\nExiting without saving."));
+				}
+			}
+			Serial.println(F("\nQuitting command mode."));
 			flag = 0;
-			Serial.println("\nExiting command mode.");
 			break;
 		default:
 			break;
-		}
-	}
-}
+		} // end case
+
+	} // end while
+
+	return changed;
+
+} // end configure
 
 /**
  * Waits in "error" mode until the user enters command mode and
  * configures the node.
  *
  */
-void Menu::waitForWifiConfig()
+void Menu::waitForConfig()
 {
-	uint8_t flag = 1;
+	// Read characters and discard
+	Helper::readAll();
 
-	// Read characters - discard since it just gets us into command mode
-	while (Serial.available())
-	{
-		Serial.read();
-		yield();
-	}
-
-	while (flag)
+	while (1)
 	{
 		Helper::toggleLed(50);
-		yield();
 
+		// Wait until user initiates command mode by pressing keys
 		if (Serial.available())
 		{
-			while (Serial.available())
-			{
-				Serial.read();
-			}
-			configure();
-			if (wifi->initialize())
-			{
-				flag = true;
-				break;
-			}
-			else
-			{
-				Helper::error(ERROR_WIRELESS);
-			}
+			break;
 		}
 	}
-}
-
-/**
- * Waits in "error" mode until the user enters command mode and
- * configures the node.
- *
- */
-void Menu::waitForPubSubConfig()
-{
-	uint8_t flag = false;
 
 	// Read characters - discard since it just gets us into command mode
-	while (Serial.available())
-	{
-		Serial.read();
-	}
+	Helper::readAll();
 
-	while (!flag)
-	{
-		Helper::toggleLed(50);
-		if (Serial.available())
-		{
-			while (Serial.available())
-			{
-				Serial.read();
-			}
-			configure();
-			flag = true;
-		}
-	}
 }
-

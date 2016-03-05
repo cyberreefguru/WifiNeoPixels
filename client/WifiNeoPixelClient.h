@@ -25,13 +25,9 @@
 
 void worker();
 
-volatile uint8_t* getCommandBuffer();
-
 boolean isCommandAvailable();
 void setCommandAvailable(boolean flag);
 uint8_t commandDelay(uint32_t time);
-
-void parseCommand();
 
 void pubsubCallback(char* topic, byte* payload, unsigned int length);
 

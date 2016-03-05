@@ -10,6 +10,8 @@
 
 #include "NeopixelWrapper.h"
 
+void resetIntensity();
+
 
 /**
  * Constructor
@@ -17,12 +19,7 @@
 NeopixelWrapper::NeopixelWrapper()
 {
 	leds = 0;
-//	maxIntensity = DEFAULT_INTENSITY;
-//	intensity = DEFAULT_INTENSITY;
 	gHue = 0;
-//	sparkleCount = 0;
-//	maxFps = DEFAULT_FPS;
-//	frameWaitTime = 1000/DEFAULT_FPS;
 	gHueUpdateTime = 20;
 }
 
@@ -34,8 +31,19 @@ boolean NeopixelWrapper::initialize(uint8_t numLeds, uint8_t intensity)
 {
 	boolean status = false;
 
+	// Free memory if we already allocated it
+	if( leds != 0 )
+	{
+		free(leds);
+	}
+
+	// Allocate memory for LED buffer
 	leds = (CRGB *) malloc(sizeof(CRGB) * numLeds);
-	if (leds != 0)
+	if (leds == 0)
+	{
+		Serial.println(F("ERROR - unable to allocate LED memory"));
+	}
+	else
 	{
 		FastLED.addLeds<WS2812, D8>(leds, numLeds).setCorrection(TypicalLEDStrip);
 
@@ -46,16 +54,6 @@ boolean NeopixelWrapper::initialize(uint8_t numLeds, uint8_t intensity)
 
 	return status;
 }
-
-/**
- * Re-initializes the library
- */
-boolean NeopixelWrapper::reinitialize(uint8_t numLeds, uint8_t intensity)
-{
-	free(leds);
-	return initialize( numLeds, intensity );;
-}
-
 
 /**
  * Returns color of pixel, or null if out of bounds
@@ -112,23 +110,6 @@ void NeopixelWrapper::show()
 	FastLED.show();
 }
 
-///**
-// * Returns frames per second
-// *
-// */
-//uint8_t NeopixelWrapper::getFramesPerSecond()
-//{
-//	return frameWaitTime*1000;
-//}
-//
-///**
-// * Changes the amount of times per second functions are
-// * updated.
-// */
-//void NeopixelWrapper::setFramesPerSecond(uint8_t fps)
-//{
-//	frameWaitTime = 1000/fps;
-//}
 
 /**
  * Returns the hue update time
@@ -172,10 +153,8 @@ void NeopixelWrapper::setIntensity(uint8_t i)
  */
 void NeopixelWrapper::fill(CRGB color, uint8_t show)
 {
-	if( FastLED.getBrightness() == 0)
-	{
-		FastLED.setBrightness( DEFAULT_INTENSITY );
-	}
+	resetIntensity();
+
 	for (uint8_t i = 0; i < FastLED.size(); i++)
     {
         leds[i] = color;
@@ -194,6 +173,7 @@ void NeopixelWrapper::fill(CRGB color, uint8_t show)
  */
 void NeopixelWrapper::fillPattern(uint8_t pattern, CRGB onColor, CRGB offColor)
 {
+	resetIntensity();
 	setPattern(0, FastLED.size(), pattern, 8, onColor, offColor, true);
 }
 
@@ -208,6 +188,8 @@ void NeopixelWrapper::rotatePattern(uint16_t repeat, uint8_t pattern, uint8_t di
 
 	i = 0;
 	count = 0;
+	resetIntensity();
+
 	while (isCommandAvailable() == false)
 	{
 		setPattern(0, FastLED.size(), pattern, 8, onColor, offColor, true);
@@ -269,6 +251,8 @@ void NeopixelWrapper::scrollPattern(uint8_t pattern, uint8_t direction, CRGB onC
 
 	CRGB pixels[patternLength];
 	int16_t curIndex;
+
+	resetIntensity();
 
 	// Initialize the pixel buffer
 	for(uint8_t i=0; i<patternLength; i++)
@@ -412,6 +396,7 @@ void NeopixelWrapper::bounce(uint16_t repeat, uint8_t pattern, uint8_t direction
 
 	// custom bounce with 0-7, n-(n-7)
 	// TODO: bounce without scrolling off the screen
+	resetIntensity();
 
 	while (isCommandAvailable() == false)
 	{
@@ -448,6 +433,7 @@ void NeopixelWrapper::middle(uint16_t repeat, uint8_t direction, CRGB onColor, C
 	uint8_t numPixels = FastLED.size();
 	uint8_t halfNumPixels = numPixels/2;
 
+	resetIntensity();
 	if(clearEnd)
 	{
 		fill(offColor, true);
@@ -511,6 +497,7 @@ void NeopixelWrapper::randomFlash(uint32_t runTime, uint32_t onTime, uint32_t of
 {
 	uint8_t i;
 
+	resetIntensity();
 	fill(offColor, true);
 
 	while (isCommandAvailable() == false)
@@ -574,7 +561,7 @@ void NeopixelWrapper::fade(uint8_t direction, uint8_t fadeIncrement, uint32_t ti
  */
 void NeopixelWrapper::strobe(uint32_t duration, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime )
 {
-	FastLED.setBrightness(255);
+	resetIntensity();
 
 	while( isCommandAvailable() == false )
 	{
@@ -596,7 +583,7 @@ void NeopixelWrapper::lightning(CRGB onColor, CRGB offColor)
 	uint8_t i, b;
 
 	b = false;
-	FastLED.setBrightness(255);
+	resetIntensity();
 
 	count = random(2, 6);
 	for(i=0; i<count; i++)
@@ -631,7 +618,10 @@ void NeopixelWrapper::lightning(CRGB onColor, CRGB offColor)
  */
 void NeopixelWrapper::rainbow(uint32_t runTime, uint8_t glitterProbability, CRGB glitterColor, uint8_t fps)
 {
+	//TODO: Figure out to better control timing with FPS or hue update time
+
 	uint8_t frameTime = 1000/fps;
+	resetIntensity();
 
     while(isCommandAvailable() == false )
     {
@@ -649,6 +639,7 @@ void NeopixelWrapper::rainbow(uint32_t runTime, uint8_t glitterProbability, CRGB
         commandDelay( frameTime );
 
         // do some periodic updates
+        // TODO: EVERY_N_MILLISECONDS does not appear to work on the ESP8266
         EVERY_N_MILLISECONDS(gHueUpdateTime)
         {
             gHue++;
@@ -664,7 +655,10 @@ void NeopixelWrapper::rainbow(uint32_t runTime, uint8_t glitterProbability, CRGB
  */
 void NeopixelWrapper::rainbowFade(uint32_t runTime, uint8_t fps)
 {
+	//TODO: Figure out to better control timing with FPS or hue update time
+
 	uint8_t frameTime = 1000/fps;
+	resetIntensity();
 
     while(isCommandAvailable() == false )
     {
@@ -726,7 +720,10 @@ void NeopixelWrapper::rainbowFade(uint32_t runTime, uint8_t fps)
  */
 void NeopixelWrapper::confetti(uint32_t runTime, CRGB color, uint8_t fadeBy, uint8_t fps)
 {
+	//TODO: Figure out to better control timing with FPS or hue update time
+
 	uint8_t frameTime = 1000/fps;
+	resetIntensity();
 
 	while(isCommandAvailable() == false )
     {
@@ -761,9 +758,10 @@ void NeopixelWrapper::confetti(uint32_t runTime, CRGB color, uint8_t fadeBy, uin
  */
 void NeopixelWrapper::cylon(uint16_t repeat, CRGB color, uint32_t fadeTime, uint8_t fps)
 {
+	//TODO: Figure out to better control timing with FPS or hue update time
 	uint16_t count = 0;
 	repeat = FastLED.size()*repeat;
-//	uint8_t frameTime = 1000/fps;
+	resetIntensity();
 
     while(isCommandAvailable() == false )
     {
@@ -802,8 +800,11 @@ void NeopixelWrapper::cylon(uint16_t repeat, CRGB color, uint32_t fadeTime, uint
  */
 void NeopixelWrapper::bpm(uint32_t runTime, uint8_t fps)
 {
+	//TODO: Figure out to better control timing with FPS or hue update time
 	uint8_t frameTime = 1000/fps;
-    while(isCommandAvailable() == false )
+	resetIntensity();
+
+	while(isCommandAvailable() == false )
     {
         // colored stripes pulsing at a defined Beats-Per-Minute (BPM)
         uint8_t BeatsPerMinute = 62;
@@ -831,8 +832,11 @@ void NeopixelWrapper::bpm(uint32_t runTime, uint8_t fps)
  */
 void NeopixelWrapper::juggle(uint32_t runTime, uint8_t fps)
 {
+	//TODO: Figure out to better control timing with FPS or hue update time
 	uint8_t frameTime = 1000/fps;
-    while(isCommandAvailable() == false )
+	resetIntensity();
+
+	while(isCommandAvailable() == false )
     {
         // eight colored dots, weaving in and out of sync with each other
         fadeToBlackBy(leds, FastLED.size(), 20);
@@ -994,8 +998,7 @@ void NeopixelWrapper::setPattern(int16_t startIndex, uint8_t length, uint8_t pat
 }
 
 /**
- * Sets the color of the specified LED for onTime time.  If clearAfter
- * is true, returns color to original color and waits offTime before returning.
+ * Sets the color of the specified LED.
  */
 void NeopixelWrapper::setPixel(int16_t index, CRGB color)
 {
@@ -1015,3 +1018,14 @@ void NeopixelWrapper::setPixel(int16_t index, CRGB color)
 	}
 }
 
+/**
+ * If current intensity is 0, reset to default
+ *
+ */
+void resetIntensity()
+{
+	if( FastLED.getBrightness() == 0)
+	{
+		FastLED.setBrightness( DEFAULT_INTENSITY );
+	}
+}

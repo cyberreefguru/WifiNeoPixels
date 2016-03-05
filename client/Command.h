@@ -73,7 +73,7 @@
 #define CMD_JUGGLE              0x25
 
 // Administrative Functions
-#define CMD_SET_FPS             0x30
+//#define CMD_SET_FPS             0x30
 #define CMD_SET_HUE_UPDATE_TIME 0x31
 #define CMD_SET_INTENSITY		0x32
 

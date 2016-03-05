@@ -15,23 +15,30 @@
 #include "Command.h"
 #include "Helper.h"
 
+#define JSON_BUFFER_SIZE	512
+
+
 class PubSubWrapper
 {
 public:
 	PubSubWrapper();
-	uint8_t initialize(Configuration* config, WifiWrapper* wifi, uint8_t* commandBuffer);
-	void waitForConfig();
+	uint8_t initialize(Configuration* config, WifiWrapper* wifi);
 	void callback(char* topic, byte* payload, unsigned int length);
-	uint8_t disconnect();
+
 	uint8_t connect();
+	uint8_t disconnect();
 	uint8_t checkConnection();
+
 	void work();
 	void publish( char *channel, char* buffer);
+	void publish( char *channel, JsonObject& obj);
+	uint8_t *getBuffer();
+
 
 protected:
 	PubSubClient pubsub;
 	Configuration* config;
-	uint8_t* commandBuffer;
+	uint8_t* jsonBuffer;
 
 };
 
@@ -42,10 +49,10 @@ extern "C"
 {
 #endif
 
-extern void worker();
 extern uint8_t isCommandAvailable();
 extern void setCommandAvailable(uint8_t b);
 extern uint8_t commandDelay(uint32_t time);
+
 extern void pubsubCallback(char* topic, byte* payload, unsigned int length);
 
 #ifdef __cplusplus

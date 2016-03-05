@@ -21,22 +21,28 @@
 #include "WifiWrapper.h"
 #include "Helper.h"
 
+#define STATUS_NOP		0
+#define STATUS_REBOOT	1
+
+#define INPUT_BUFFER_SIZE		20
 
 
 class Menu
 {
 public:
 	Menu();
-	uint8_t initialize(Configuration* config, WifiWrapper* wifi, PubSubWrapper* pubsub, NeopixelWrapper* controller);
-	void configure();
-	void waitForWifiConfig();
-	void waitForPubSubConfig();
+	uint8_t initialize(Configuration* config);
+//	uint8_t initialize(Configuration* config, WifiWrapper* wifi, PubSubWrapper* pubsub, NeopixelWrapper* controller);
+	uint8_t configure();
+	void waitForConfig();
 
 protected:
 	Configuration* config;
-	WifiWrapper* wifi;
-	PubSubWrapper* pubsub;
-	NeopixelWrapper* controller;
+//	WifiWrapper* wifi;
+//	PubSubWrapper* pubsub;
+//	NeopixelWrapper* controller;
+
+	void readAll();
 
 };
 

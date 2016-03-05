@@ -15,6 +15,7 @@
 #define ERROR_CONFIG			3
 #define ERROR_GENERAL			20
 
+
 class Helper
 {
 public:
@@ -22,7 +23,11 @@ public:
 	static void error(uint8_t error);
 	static void dumpBuffer(uint8_t *buf, uint8_t len);
 	static void toggleLed(uint32_t time);
-	static uint8_t readString(uint8_t *b, uint8_t len);
+
+	static int8_t readChar(boolean b);
+	static int16_t readInt(uint8_t *b, uint8_t len);
+	static int16_t readString(uint8_t *b, uint8_t len);
+	static void readAll();
 };
 
 

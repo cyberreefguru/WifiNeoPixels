@@ -24,13 +24,29 @@ uint8_t WifiWrapper::initialize(Configuration* config)
 }
 
 
-
+/**
+ * Initializes the WIFI module
+ *
+ * The method allows initialize to be called without access to the config object.
+ *
+ */
 uint8_t WifiWrapper::initialize()
 {
 	uint8_t flag = false;
 	uint8_t count = 0;
 
-	Serial.println(F("Initializing WIFI:"));
+	Serial.println(F("Initializing WIFI..."));
+
+	Serial.print(F("Connection Status: "));
+	Serial.println( WiFi.status() );
+
+	delay(500);
+	if( WiFi.status() == WL_CONNECTED )
+	{
+		Serial.println(F("Disconnecting current session..."));
+		WiFi.disconnect();
+	}
+
 	Serial.print(F("Connecting to "));
 	Serial.print((char *)config->getSsid() );
 
@@ -66,6 +82,10 @@ uint8_t WifiWrapper::initialize()
 
 }
 
+/**
+ * Returns the WIFI Client
+ *
+ */
 WiFiClient& WifiWrapper::getWifiClient()
 {
 	return wifi;
