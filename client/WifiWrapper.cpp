@@ -39,19 +39,20 @@ uint8_t WifiWrapper::initialize()
 
 	Serial.print(F("Connection Status: "));
 	Serial.println( WiFi.status() );
-
 	delay(500);
-	if( WiFi.status() == WL_CONNECTED )
-	{
-		Serial.println(F("Disconnecting current session..."));
-		WiFi.disconnect();
-	}
+
+//	if( WiFi.status() == WL_CONNECTED )
+//	{
+//		Serial.println(F("Disconnecting current session..."));
+//		WiFi.disconnect(1);
+//	}
 
 	Serial.print(F("Connecting to "));
 	Serial.print((char *)config->getSsid() );
 
 	// We start by connecting to a WiFi network
 	WiFi.begin( (char *)config->getSsid(), (char *)config->getPassword());
+	delay(500);
 
 	while( count < config->getWifiTries() )
 	{
@@ -72,6 +73,9 @@ uint8_t WifiWrapper::initialize()
 	{
 		Serial.print(F(".SUCCESS!\n\rConnected: "));
 		Serial.println(WiFi.localIP());
+
+		// pause after configuring WIFI
+		delay(250);
 	}
 	else
 	{

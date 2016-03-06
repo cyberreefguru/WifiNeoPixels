@@ -55,42 +55,17 @@ void setup()
     }
 
     // Initialize menu
-//	menu.initialize(&config, &wifiw, &pubsubw, &controller);
 	menu.initialize(&config);
 
+	// Initialize wifi, pubsub, and LEDs
 	if( !initialize() )
 	{
 		menu.waitForConfig();
-		if( menu.configure() )
-		{
-			if( !initialize() )
-			{
-				Serial.println(F("\nERROR - failed to initialize node."));
-				Helper::error(ERROR_GENERAL);
-			}
-		}
-		else
-		{
-			Serial.println(F("\nERROR - no changes to configuration."));
-			Helper::error(ERROR_GENERAL);
-		}
+		menu.configure();
+		Serial.println(F("\nERROR - failed to initialize node."));
+		Helper::error(ERROR_GENERAL);
 	}
 
-	Serial.print(F("\nLED Controller initialized..."));
-	controller.fill(CRGB::White, true);
-	delay(500);
-	yield();
-	controller.fill(CRGB::Black, true);
-	delay(500);
-	yield();
-	controller.fill(CRGB::Red, true);
-	delay(500);
-	yield();
-	controller.fill(CRGB::Black, true);
-	delay(500);
-	yield();
-
-	Serial.println(F("LED Module Configured."));
     Serial.println(F("** Initialization Complete **"));
 
 	heartbeat = millis();
@@ -140,14 +115,8 @@ void loop()
 	if( configFlag == 1)
 	{
 		configFlag = 0;
-		if( menu.configure() > 0)
-		{
-			if( !initialize() )
-			{
-				Serial.println(F("\nERROR - failed to initialize node."));
-				Helper::error(ERROR_GENERAL);
-			}
-		}
+		menu.configure();
+		Helper::error(ERROR_GENERAL);
 	}
 
 } // end loop
@@ -171,7 +140,16 @@ boolean initialize()
 			// Initialize the LEDs
 			if ( controller.initialize(config.getNumberLeds(), DEFAULT_INTENSITY) )
 			{
-				Serial.println(F("Configured!"));
+				Serial.print(F("\nLED Controller initialized..."));
+				controller.fill(CRGB::White, true);
+				delay(250);
+				controller.fill(CRGB::Black, true);
+				delay(250);
+				controller.fill(CRGB::Red, true);
+				delay(250);
+				controller.fill(CRGB::Black, true);
+				Serial.println(F("LED Module Configured."));
+
 				configured = true;
 			}
 			else
