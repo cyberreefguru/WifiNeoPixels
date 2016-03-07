@@ -21,8 +21,6 @@
 								<option id="it.baeyens.arduino.compiler.cpp.sketch.option.incpath.945920900" name="Include Paths (-I)" superClass="it.baeyens.arduino.compiler.cpp.sketch.option.incpath" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/WifiNeoPixelClient/arduino/core}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/WifiNeoPixelClient/arduino/variant}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/WifiNeoPixelClient/Libraries/ESP8266WiFi}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/WifiNeoPixelClient/Libraries/ESP8266WiFi/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/WifiNeoPixelClient/Libraries/pubsubclient}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/WifiNeoPixelClient/Libraries/pubsubclient/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/WifiNeoPixelClient/Libraries/ArduinoJson}&quot;"/>
@@ -30,6 +28,8 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/WifiNeoPixelClient/Libraries/FastLED}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/WifiNeoPixelClient/Libraries/NeoPixelBus}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/WifiNeoPixelClient/Libraries/EEPROM}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/WifiNeoPixelClient/Libraries/ESP8266WiFi}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/WifiNeoPixelClient/Libraries/ESP8266WiFi/src}&quot;"/>
 								</option>
 								<inputType id="it.baeyens.arduino.compiler.cpp.sketch.input.142404214" name="CPP source files" superClass="it.baeyens.arduino.compiler.cpp.sketch.input"/>
 							</tool>
@@ -37,8 +37,6 @@
 								<option id="it.baeyens.arduino.compiler.c.sketch.option.incpath.724288162" name="Include Paths (-I)" superClass="it.baeyens.arduino.compiler.c.sketch.option.incpath" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/WifiNeoPixelClient/arduino/core}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/WifiNeoPixelClient/arduino/variant}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/WifiNeoPixelClient/Libraries/ESP8266WiFi}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/WifiNeoPixelClient/Libraries/ESP8266WiFi/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/WifiNeoPixelClient/Libraries/pubsubclient}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/WifiNeoPixelClient/Libraries/pubsubclient/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/WifiNeoPixelClient/Libraries/ArduinoJson}&quot;"/>
@@ -46,6 +44,8 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/WifiNeoPixelClient/Libraries/FastLED}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/WifiNeoPixelClient/Libraries/NeoPixelBus}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/WifiNeoPixelClient/Libraries/EEPROM}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/WifiNeoPixelClient/Libraries/ESP8266WiFi}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/WifiNeoPixelClient/Libraries/ESP8266WiFi/src}&quot;"/>
 								</option>
 								<inputType id="it.baeyens.arduino.compiler.c.sketch.input.836760749" name="C Source Files" superClass="it.baeyens.arduino.compiler.c.sketch.input"/>
 							</tool>
@@ -72,5 +72,9 @@
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
-	<storageModule moduleId="refreshScope"/>
+	<storageModule moduleId="refreshScope" versionNumber="2">
+		<configuration configurationName="Release">
+			<resource resourceType="PROJECT" workspacePath="/WifiNeoPixelClient"/>
+		</configuration>
+	</storageModule>
 </cproject>

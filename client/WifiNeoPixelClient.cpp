@@ -5,6 +5,7 @@
 //#define __DEBUG
 
 #include "WifiNeoPixelClient.h"
+#include <user_interface.h>
 
 // Internal Variables
 static Configuration config;
@@ -19,7 +20,16 @@ static uint32_t heartbeat = 0;
 void parseCommand();
 boolean initialize();
 
-//os_timer_t myTimer;
+os_timer_t myTimer;
+
+
+// start of timerCallback
+void timerCallback(void *pArg)
+{
+	digitalWrite(BUILTIN_LED, !digitalRead( BUILTIN_LED ) );
+
+} // End of timerCallback
+
 
 /**
  * Arduino setup function
@@ -72,6 +82,8 @@ void setup()
 
 	digitalWrite(BUILTIN_LED, HIGH);
 
+	os_timer_setfn(&myTimer, timerCallback, NULL);
+	os_timer_arm(&myTimer, 500, true);
 }
 
 /**
@@ -105,11 +117,11 @@ void loop()
 	}
 
 	// flash LED
-	if( heartbeat < millis() )
-	{
-		heartbeat = millis() + 500;
-		digitalWrite(BUILTIN_LED, !digitalRead( BUILTIN_LED ) );
-	}
+//	if( heartbeat < millis() )
+//	{
+//		heartbeat = millis() + 500;
+//		digitalWrite(BUILTIN_LED, !digitalRead( BUILTIN_LED ) );
+//	}
 
 	// Check if we need to enter command mode to reconfigure the node
 	if( configFlag == 1)
