@@ -14,21 +14,17 @@ static PubSubWrapper pubsubw;
 static WifiWrapper wifiw;
 static Menu menu;
 
-static volatile uint8_t commandAvailable = false;
-static uint32_t heartbeat = 0;
+// software timer instance
+os_timer_t ledTimer;
 
+// Indicates we have a command waiting for processing
+static volatile uint8_t commandAvailable = false;
+
+// Internal functions
+void configure();
 void parseCommand();
 boolean initialize();
-
-os_timer_t myTimer;
-
-
-// start of timerCallback
-void timerCallback(void *pArg)
-{
-	digitalWrite(BUILTIN_LED, !digitalRead( BUILTIN_LED ) );
-
-} // End of timerCallback
+void ledTimerCallback(void *pArg);
 
 
 /**
@@ -71,19 +67,16 @@ void setup()
 	if( !initialize() )
 	{
 		menu.waitForConfig();
-		menu.configure();
-		Serial.println(F("\nERROR - failed to initialize node."));
-		Helper::error(ERROR_GENERAL);
+		configure();
 	}
 
     Serial.println(F("** Initialization Complete **"));
 
-	heartbeat = millis();
-
 	digitalWrite(BUILTIN_LED, HIGH);
 
-	os_timer_setfn(&myTimer, timerCallback, NULL);
-	os_timer_arm(&myTimer, 500, true);
+	// Setup and initiate internal timer
+	os_timer_setfn(&ledTimer, ledTimerCallback, NULL);
+	os_timer_arm(&ledTimer, 500, true);
 }
 
 /**
@@ -116,22 +109,29 @@ void loop()
 		configFlag = 1;
 	}
 
-	// flash LED
-//	if( heartbeat < millis() )
-//	{
-//		heartbeat = millis() + 500;
-//		digitalWrite(BUILTIN_LED, !digitalRead( BUILTIN_LED ) );
-//	}
-
 	// Check if we need to enter command mode to reconfigure the node
 	if( configFlag == 1)
 	{
 		configFlag = 0;
-		menu.configure();
-		Helper::error(ERROR_GENERAL);
+		configure();
 	}
 
 } // end loop
+
+/**
+ * Enters configure mode, then waits until power is cycled
+ */
+void configure()
+{
+	menu.configure();
+
+	// NOTE: I could not get the device configured reliably, so cycle the power
+	//       is the best option.  Even "reset" and "restart" don't work reliably.
+
+	Serial.println(F("\nUser Configuration Complete - please cycle power."));
+	Helper::error(ERROR_GENERAL);
+}
+
 
 /**
  * Initializes the node.  Returns true if node configured properly, false otherwise.
@@ -181,7 +181,7 @@ boolean initialize()
 
 	return configured;
 
-}
+} // end initialize
 
 /**
  * calls others functions while we are not busy
@@ -323,8 +323,12 @@ void parseCommand()
 
 			// Status of command (SUCCESS/FAIL)
 			root[KEY_STATUS] = STATUS_SUCCESS;
+
+			// Publish message to response channel
 			pubsubw.publish( (char *)config.getMyResponseChannel(), root);
-		}
+
+		} // end if notify on complete
+
 	} // end if cmd parse = true
 
 }
@@ -372,10 +376,27 @@ uint8_t commandDelay(uint32_t time)
 
 }
 
+/**
+ * C function that calls class-level callback
+ * Admittedly a hack, but it works
+ *
+ */
 void pubsubCallback(char* topic, byte* payload, unsigned int length)
 {
 //	Serial.println("Calling pubsub callback...");
 	pubsubw.callback(topic, payload, length);
 
 }
+
+/**
+ * Software timer callback - simply toggles the LED
+ *
+ */
+void ledTimerCallback(void *pArg)
+{
+	// Toggle built-in LED
+	digitalWrite(BUILTIN_LED, !digitalRead( BUILTIN_LED ) );
+
+} // End of timerCallback
+
 
