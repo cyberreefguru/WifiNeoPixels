@@ -206,11 +206,16 @@ void parseCommand()
 	setCommandAvailable(false);
 
 #ifdef __DEBUG
-		Serial.println("parsing command");
+	Serial.print( millis() );
+	Serial.print(F(" - parsing command..."));
 #endif
 
 	if( cmd.parse( (uint8_t *)pubsubw.getBuffer() ) )
 	{
+		if( cmd.getNodeId() == 0 )
+		{
+			cmd.setNodeId( config.getNodeId() );
+		}
 #ifdef __DEBUG
 		cmd.dump();
 #endif
@@ -308,28 +313,70 @@ void parseCommand()
 		// Send response with the command is complete
 		if( cmd.getNotifyOnComplete() )
 		{
-			// TODO: figure out better way to handle this buffer size
-			StaticJsonBuffer<100> jsonBuffer;
-			JsonObject& root = jsonBuffer.createObject();
+			if( cmd.buildResponse( pubsubw.getBuffer() ) )
+			{
+				Serial.print(F("Publishing Completion Response: "));
+				Serial.println((char *)config.getMyResponseChannel() );
 
-			// Our command is "complete"
-			root[KEY_CMD] = CMD_COMPLETE;
-
-			// Who is complete
-			root[KEY_NODE_ID] = config.getNodeId();
-
-			// What unique id of command that was complete
-			root[KEY_UNIQUE_ID] = cmd.getUniqueId();
-
-			// Status of command (SUCCESS/FAIL)
-			root[KEY_STATUS] = STATUS_SUCCESS;
-
-			// Publish message to response channel
-			pubsubw.publish( (char *)config.getMyResponseChannel(), root);
+				// Publish message to response channel
+				pubsubw.publish( (char *)config.getMyResponseChannel() );
+			}
 
 		} // end if notify on complete
 
+		// NOTE: Don't be foolish and send a command to "all" with relay set; strange things will happen
+		if( cmd.getRelay() == true )
+		{
+			Serial.print( millis() );
+			Serial.println(F(" - Relay Command"));
+			if(  cmd.getRelayNodeSize() > 0 )
+			{
+				uint8_t *relayNodes = cmd.getRelayNodes(); // get relay node array
+				uint8_t destNode = relayNodes[0]; // save the node we are relaying to
+
+				if( destNode > 0 )
+				{
+					cmd.setNodeId( destNode ); // change node ID for command
+
+					Serial.print( millis() );
+					Serial.print(F(" - Relaying to: "));
+					Serial.println( destNode );
+
+					// Shift relay nodes left 1, removing destination from list
+					cmd.shiftRelayNodes();
+
+					// Build comment to relay to next node
+					if( cmd.buildCommand( pubsubw.getBuffer() ) )
+					{
+						// Build channel to send it to
+						char channel[STRING_SIZE];
+						memset(channel, 0, STRING_SIZE);
+						sprintf((char *)channel, DEFAULT_CHANNEL_MY, destNode );
+
+						// Send command
+						Serial.print( millis() );
+						Serial.print(F(" - Publishing Relay Command: "));
+						Serial.println(channel );
+
+						pubsubw.publish( channel );
+					}
+				}
+				else
+				{
+					Serial.println(F("ERROR - Destination Node = 0"));
+				}
+			}
+			else
+			{
+				Serial.println(F("** END OF RELAY CHAIN **"));
+			}
+
+		} // end if relay
+
 	} // end if cmd parse = true
+
+	Serial.print( millis() );
+	Serial.print(F(" - Command Complete"));
 
 }
 

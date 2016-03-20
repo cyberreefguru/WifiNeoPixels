@@ -36,13 +36,13 @@ void Helper::error(uint8_t errorCode)
 		switch( errorCode )
 		{
 		case ERROR_WIRELESS:
-			Helper::toggleLed(100);
+			Helper::toggleLed(300);
 			break;
 		case ERROR_DRIVER:
 			Helper::toggleLed(200);
 			break;
 		case ERROR_GENERAL:
-			Helper::toggleLed(350);
+			Helper::toggleLed(100);
 			break;
 		}
 	}

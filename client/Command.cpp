@@ -7,6 +7,8 @@
 
 #include "Command.h"
 
+
+
 /**
  * Constructor - initializes object to defaults
  *
@@ -25,6 +27,7 @@ void Command::initialize()
 	command = CMD_ERROR;
 	uniqueId = 0;
 	notifyOnComplete = false;
+	relay = false;
 	framesPerSecond = DEFAULT_FPS;
 	updateTime = 0;
 	intensity = DEFAULT_INTENSITY;
@@ -45,7 +48,13 @@ void Command::initialize()
 	fadeIncrement = 0;
 	index = 0;
 	show = false;
-}
+
+	for(uint8_t i=0; i<MAX_RELAY_NODES; i++)
+	{
+		relayNodes[i] = 0;
+	}
+
+} // end initialize
 
 /**
  * Parses buffer into object
@@ -60,7 +69,6 @@ uint8_t Command::parse(uint8_t* b)
 #endif
 
 	StaticJsonBuffer<CMD_BUFFER_SIZE> jsonBuffer;
-
 	JsonObject& obj = jsonBuffer.parseObject((char *)b);
 	if (!obj.success())
 	{
@@ -80,6 +88,7 @@ uint8_t Command::parse(uint8_t* b)
 		uniqueId = obj[KEY_UNIQUE_ID].as<long>();
 		nodeId = obj[KEY_NODE_ID].as<uint8_t>();
 		notifyOnComplete = obj[KEY_NOTIFY_ON_COMPLETE].as<uint8_t>();
+		relay = obj[KEY_RELAY].as<uint8_t>();
 		show = obj[KEY_SHOW].as<uint8_t>();
 
 		framesPerSecond = obj[KEY_FPS].as<uint8_t>();
@@ -105,11 +114,108 @@ uint8_t Command::parse(uint8_t* b)
 
 		fadeIncrement = obj[KEY_FADE_INCREMENT].as<uint8_t>();
 
+		if( obj.containsKey(KEY_RELAY_NODES) )
+		{
+			relayNodeSize = 0;
+			JsonArray& nestedArray = obj[KEY_RELAY_NODES].asArray();
+			for(uint8_t i=0; i<nestedArray.size(); i++ )
+			{
+				relayNodes[i] = nestedArray[i].as<uint8_t>();
+				relayNodeSize += 1;
+			}
+		}
+
 		status = true;
 
 	}
 
 	return status;
+} // end parse
+
+uint8_t Command::buildCommand(uint8_t *buffer)
+{
+	uint8_t status = false;
+
+	StaticJsonBuffer<CMD_BUFFER_SIZE> jsonBuffer;
+	JsonObject& root = jsonBuffer.createObject();
+
+	root[KEY_CMD] = command;
+	root[KEY_UNIQUE_ID] = uniqueId;
+	root[KEY_NODE_ID] = nodeId;
+	root[KEY_NOTIFY_ON_COMPLETE] = notifyOnComplete;
+	root[KEY_RELAY] = relay;
+	if( relay == true )
+	{
+		JsonArray&  nestedArray  = root.createNestedArray(KEY_RELAY_NODES);
+		for(uint8_t i = 0; i<relayNodeSize; i++)
+		{
+			nestedArray.add(relayNodes[i]);
+		}
+	}
+	root[KEY_SHOW] = show;
+	root[KEY_FPS] = framesPerSecond;
+	root[KEY_UPDATE_TIME] = updateTime;
+	root[KEY_INTENSITY] = intensity;
+	root[KEY_INDEX] = index;
+	root[KEY_PATTERN] = pattern;
+	root[KEY_DURATION] = duration;
+	root[KEY_REPEAT] = repeat;
+	root[KEY_DIRECTION] = direction;
+	root[KEY_FADE_BY] = fadeBy;
+	root[KEY_PROBABILITY] = probability;
+	root[KEY_CLEAR_AFTER] = clearAfter;
+	root[KEY_CLEAR_END] = clearEnd;
+	root[KEY_ON_COLOR] = onColor;
+	root[KEY_OFF_COLOR] = offColor;
+	root[KEY_ON_TIME] = onTime;
+	root[KEY_OFF_TIME] = offTime;
+	root[KEY_BOUNCE_TIME] = bounceTime;
+	root[KEY_FADE_TIME] = fadeTime;
+	root[KEY_FADE_INCREMENT] = fadeIncrement;
+
+	root.printTo((char *)buffer, CMD_BUFFER_SIZE);
+
+	status = true;
+
+	return status;
+}
+
+uint8_t Command::buildResponse(uint8_t *buffer)
+{
+	uint8_t status = false;
+
+	StaticJsonBuffer<CMD_BUFFER_SIZE> jsonBuffer;
+	JsonObject& root = jsonBuffer.createObject();
+
+	// Our command is "complete"
+	root[KEY_CMD] = CMD_COMPLETE;
+
+	// Who is complete
+	root[KEY_NODE_ID] = getNodeId();
+
+	// What unique id of command that was complete
+	root[KEY_UNIQUE_ID] = getUniqueId();
+
+	// Status of command (SUCCESS/FAIL)
+	root[KEY_STATUS] = STATUS_SUCCESS;
+
+	root.printTo((char *)buffer, CMD_BUFFER_SIZE);
+
+	status = true;
+
+	return status;
+}
+
+void Command::shiftRelayNodes()
+{
+	// Shift array one node to the left
+	for(uint8_t i=0; i<relayNodeSize; i++)
+	{
+		relayNodes[i] = relayNodes[i+1];
+	}
+	relayNodes[relayNodeSize-1] = 0; // zero last node
+	relayNodeSize -= 1;
+
 }
 
 void Command::dump()
@@ -122,6 +228,26 @@ void Command::dump()
 	Serial.print( nodeId, HEX );
 	Serial.print(", notifyOncomplete: ");
 	Serial.print( notifyOnComplete );
+	Serial.print(", relay: ");
+	Serial.print( relay );
+	Serial.print(", relayNodes: {");
+	if( relayNodeSize == 0 )
+	{
+		Serial.print("}, ");
+	}
+	for(uint8_t i=0; i<relayNodeSize; i++)
+	{
+		Serial.print( relayNodes[i]);
+		if( i == (relayNodeSize-1) )
+		{
+			Serial.print("}, ");
+			break;
+		}
+		else
+		{
+			Serial.print(",");
+		}
+	}
 	Serial.print(", show: ");
 	Serial.print( show );
 	Serial.print(", fps: ");
@@ -406,5 +532,34 @@ uint8_t Command::getNotifyOnComplete() const
 void Command::setNotifyOnComplete(uint8_t notifyOnComplete)
 {
 	this->notifyOnComplete = notifyOnComplete;
+}
+
+uint8_t Command::getRelay() const
+{
+	return relay;
+}
+
+void Command::setRelay(uint8_t relay)
+{
+	this->relay = relay;
+}
+
+
+uint8_t* Command::getRelayNodes()
+{
+	return relayNodes;
+}
+
+void Command::setRelayNode(uint8_t index, uint8_t value)
+{
+	if( index < MAX_RELAY_NODES )
+	{
+		relayNodes[index] = value;
+	}
+}
+
+uint8_t Command::getRelayNodeSize()
+{
+	return relayNodeSize;
 }
 

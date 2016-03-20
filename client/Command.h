@@ -16,10 +16,13 @@
 #include "NeopixelWrapper.h"
 
 #define CMD_BUFFER_SIZE		512
+#define MAX_RELAY_NODES		16
 
 // Defines JSON keys for command values
 #define	KEY_CMD						"cmd"
 #define KEY_NOTIFY_ON_COMPLETE		"noc"
+#define KEY_RELAY					"rly"
+#define KEY_RELAY_NODES				"rn"
 #define KEY_FPS						"fps"
 #define KEY_UPDATE_TIME				"udtime"
 #define KEY_PATTERN					"p"
@@ -37,16 +40,12 @@
 #define KEY_BOUNCE_TIME				"bt"
 #define KEY_FADE_TIME				"ft"
 #define KEY_FADE_INCREMENT			"fi"
-//#define KEY_CMD_RESPONSE			"cr"
 #define KEY_STATUS					"st"
 #define KEY_NODE_ID					"nid"
-//#define KEY_CMD_ID					"cid"
 #define KEY_INTENSITY				"i"
 #define KEY_INDEX					"idx"
 #define KEY_SHOW					"s"
 #define KEY_UNIQUE_ID				"uid"
-
-
 
 // Basic Functions
 #define CMD_FILL                0x01
@@ -95,6 +94,8 @@ public:
 	// Functions
 	void initialize();
 	uint8_t parse(uint8_t *b);
+	uint8_t buildCommand(uint8_t *b);
+	uint8_t buildResponse(uint8_t *b);
 	void dump();
 
 	// Getters and Setters
@@ -109,6 +110,7 @@ public:
 
 	uint8_t getIndex() const;
 	void setIndex(uint8_t index);
+
 	uint8_t getShow() const;
 	void setShow(uint8_t show);
 
@@ -143,8 +145,17 @@ public:
 	void setProbability(uint8_t probability);
 	uint16_t getRepeat() const;
 	void setRepeat(uint16_t repeat);
+
 	uint8_t getNotifyOnComplete() const;
 	void setNotifyOnComplete(uint8_t notifyOnComplete);
+
+	uint8_t getRelay() const;
+	void setRelay(uint8_t relay);
+
+	uint8_t *getRelayNodes();
+	void setRelayNode(uint8_t index, uint8_t value);
+	uint8_t getRelayNodeSize();
+	void shiftRelayNodes();
 
 	uint8_t getIntensity() const;
 	void setIntensity(uint8_t i);
@@ -161,6 +172,10 @@ private:
 	uint8_t nodeId;
 
 	uint8_t notifyOnComplete;
+	uint8_t relay;
+	uint8_t relayNodes[MAX_RELAY_NODES];
+	uint8_t relayNodeSize;
+
 	uint8_t show;
 
 	uint8_t framesPerSecond;

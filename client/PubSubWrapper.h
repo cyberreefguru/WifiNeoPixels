@@ -15,9 +15,6 @@
 #include "Command.h"
 #include "Helper.h"
 
-#define JSON_BUFFER_SIZE	512
-
-
 class PubSubWrapper
 {
 public:
@@ -30,6 +27,7 @@ public:
 	uint8_t checkConnection();
 
 	void work();
+	void publish(char *channel);
 	void publish( char *channel, char* buffer);
 	void publish( char *channel, JsonObject& obj);
 	uint8_t *getBuffer();
@@ -38,7 +36,7 @@ public:
 protected:
 	PubSubClient pubsub;
 	Configuration* config;
-	uint8_t* jsonBuffer;
+	uint8_t* cmdBuf;
 
 };
 

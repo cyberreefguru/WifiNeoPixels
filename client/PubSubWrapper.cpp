@@ -10,13 +10,13 @@
 PubSubWrapper::PubSubWrapper()
 {
 	config = 0;
-	jsonBuffer = 0;
+	cmdBuf = 0;
 }
 
 uint8_t PubSubWrapper::initialize(Configuration* config, WifiWrapper* wifi)
 {
 	this->config = config;
-	pubsub.setClient( wifi->getWifiClient() );
+	pubsub.setClient( (Client &)wifi->getWifiClient() );
 
 	// Check if we are connected - if so, disconnect
 	if( pubsub.connected() )
@@ -29,14 +29,14 @@ uint8_t PubSubWrapper::initialize(Configuration* config, WifiWrapper* wifi)
 	pubsub.setCallback(pubsubCallback);
 
 	// Check if we already allocated memory; if so, free it
-	if( jsonBuffer != 0 )
+	if( cmdBuf != 0 )
 	{
-		free(jsonBuffer);
+		free(cmdBuf);
 	}
 
 	// Allocate memory
-	jsonBuffer = (uint8_t *)malloc(JSON_BUFFER_SIZE);
-	if( jsonBuffer == 0 )
+	cmdBuf = (uint8_t *)malloc(CMD_BUFFER_SIZE);
+	if( cmdBuf == 0 )
 	{
 		Serial.println(F("ERROR - unable to allocate json buffer memory!"));
 		return false;
@@ -165,7 +165,8 @@ void PubSubWrapper::work()
 void PubSubWrapper::callback(char* topic, byte* payload, unsigned int length)
 {
 #ifdef __DEBUG
-	Serial.print(F("Message arrived ["));
+	Serial.print( millis() );
+	Serial.print(F(" - Message arrived ["));
 	Serial.print(topic);
 	Serial.print(F("] "));
 	for (uint8_t i = 0; i < length; i++)
@@ -179,7 +180,7 @@ void PubSubWrapper::callback(char* topic, byte* payload, unsigned int length)
 	if( length <= CMD_BUFFER_SIZE )
 	{
 		// Copy payload to command buffer
-		memcpy( (void *)jsonBuffer, (void *)payload, length);
+		memcpy( (void *)cmdBuf, (void *)payload, length);
 		setCommandAvailable(true);
 	}
 	else
@@ -188,6 +189,16 @@ void PubSubWrapper::callback(char* topic, byte* payload, unsigned int length)
 	}
 
 }
+
+/**
+ * Publishes a message to the specified channel
+ *
+ */
+void PubSubWrapper::publish(char *channel)
+{
+	pubsub.publish(channel, (char *)cmdBuf);
+}
+
 
 
 /**
@@ -205,8 +216,8 @@ void PubSubWrapper::publish(char *channel, char *buffer)
  */
 void PubSubWrapper::publish(char *channel, JsonObject& obj)
 {
-	obj.printTo((char *)jsonBuffer, JSON_BUFFER_SIZE);
-	pubsub.publish( channel, (char *)jsonBuffer );
+	obj.printTo((char *)cmdBuf, CMD_BUFFER_SIZE);
+	pubsub.publish( channel, (char *)cmdBuf );
 }
 
 
@@ -216,6 +227,6 @@ void PubSubWrapper::publish(char *channel, JsonObject& obj)
  */
 uint8_t* PubSubWrapper::getBuffer()
 {
-	return jsonBuffer;
+	return cmdBuf;
 }
 
