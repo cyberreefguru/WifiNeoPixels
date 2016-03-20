@@ -97,6 +97,7 @@ uint8_t Command::parse(uint8_t* b)
 
 		index = obj[KEY_INDEX].as<uint8_t>();
 		pattern = obj[KEY_PATTERN].as<uint8_t>();
+		patternLength = obj[KEY_PATTERN_LENGTH].as<uint8_t>();
 		duration = obj[KEY_DURATION].as<uint32_t>();
 		repeat = obj[KEY_REPEAT].as<uint16_t>();
 		direction = obj[KEY_DIRECTION].as<uint8_t>();
@@ -158,6 +159,7 @@ uint8_t Command::buildCommand(uint8_t *buffer)
 	root[KEY_INTENSITY] = intensity;
 	root[KEY_INDEX] = index;
 	root[KEY_PATTERN] = pattern;
+	root[KEY_PATTERN_LENGTH] = patternLength;
 	root[KEY_DURATION] = duration;
 	root[KEY_REPEAT] = repeat;
 	root[KEY_DIRECTION] = direction;
@@ -172,6 +174,9 @@ uint8_t Command::buildCommand(uint8_t *buffer)
 	root[KEY_BOUNCE_TIME] = bounceTime;
 	root[KEY_FADE_TIME] = fadeTime;
 	root[KEY_FADE_INCREMENT] = fadeIncrement;
+
+	root[KEY_REPEAT] = repeat;
+	root[KEY_DURATION] = duration;
 
 	root.printTo((char *)buffer, CMD_BUFFER_SIZE);
 
@@ -260,6 +265,8 @@ void Command::dump()
 	Serial.print( index );
 	Serial.print(", pattern: ");
 	Serial.print( pattern, HEX );
+	Serial.print(", patternLength: ");
+	Serial.print( patternLength );
 	Serial.print(", duration: ");
 	Serial.print( duration );
 	Serial.print(", repeat: ");
@@ -493,6 +500,18 @@ void Command::setPattern(uint8_t pattern)
 {
 	this->pattern = pattern;
 }
+
+uint8_t Command::getPatternLength() const
+{
+	return patternLength;
+}
+
+void Command::setPatternLength(uint8_t patternLength)
+{
+	this->patternLength = patternLength;
+}
+
+
 
 uint8_t Command::getProbability() const
 {

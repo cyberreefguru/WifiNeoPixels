@@ -180,9 +180,9 @@ void NeopixelWrapper::fillPattern(uint8_t pattern, CRGB onColor, CRGB offColor)
 /**
  * Rotates a pattern across the strip; onTime determines pause between rotation
  *
- * NOTE: Pattern repeats every 8 pixels
+ * NOTE: Starts at 0, and repeats every 8 pixels through end of strip
  */
-void NeopixelWrapper::rotatePattern(uint16_t repeat, uint8_t pattern, uint8_t direction, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime)
+void NeopixelWrapper::rotatePattern(uint16_t repeat, uint32_t duration, uint8_t pattern, uint8_t direction, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime)
 {
 	uint16_t i, count;
 
@@ -233,6 +233,9 @@ void NeopixelWrapper::rotatePattern(uint16_t repeat, uint8_t pattern, uint8_t di
 /**
  * Turns on LEDs one at time in sequence.  LEFT = 0->n; RIGHT = n -> 0
  *
+ * NOTE: starts with pattern "off" the screen and scrolls "on" the screen,
+ *       then "off" the screen again
+ *
  * @pattern - the pattern to wipe
  * @direction - left (up) or right (down)
  * @onColor - color to fill LEDs with
@@ -242,7 +245,7 @@ void NeopixelWrapper::rotatePattern(uint16_t repeat, uint8_t pattern, uint8_t di
  * @clearAfter - turn LED off after waiting
  * @clearEnd - clear after complete
  */
-void NeopixelWrapper::scrollPattern(uint8_t pattern, uint8_t direction, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime, uint8_t clearAfter, uint8_t clearEnd)
+void NeopixelWrapper::scrollPattern(uint16_t repeat, uint32_t duration, uint8_t pattern, uint8_t direction, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime, uint8_t clearAfter, uint8_t clearEnd)
 {
 
 	// TODO - implement pattern length
@@ -388,46 +391,161 @@ void NeopixelWrapper::scrollPattern(uint8_t pattern, uint8_t direction, CRGB onC
 }
 
 /**
+ * Bounces the specified pattern the specified direction.
+ *
+ * NOTE: Pattern does not double flash at the ends.
  *
  */
-void NeopixelWrapper::bounce(uint16_t repeat, uint8_t pattern, uint8_t direction, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime, uint32_t bounceTime, uint8_t clearAfter, uint8_t clearEnd)
+void NeopixelWrapper::bounce(uint16_t repeat, uint32_t duration, uint8_t pattern, uint8_t patternLength, uint8_t direction, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime, uint32_t bounceTime, uint8_t clearAfter, uint8_t clearEnd)
 {
-	uint16_t count = 0;
-
 	// custom bounce with 0-7, n-(n-7)
-	// TODO: bounce without scrolling off the screen
 	resetIntensity();
 
+	uint16_t count = 0;
+	uint32_t endTime = millis() + duration;
+
+	uint8_t first = true;
+	uint8_t lstart = 0;
+	uint8_t lend = 0;
+	uint8_t rstart = 0;
+	uint8_t rend = 0;
+
+	resetIntensity();
+
+	if (direction == LEFT)
+	{
+		lstart = 0;
+		lend = FastLED.size() - patternLength;
+
+		rstart = FastLED.size() - patternLength - 1;
+		rend = 0;
+	}
+	else if (direction == RIGHT)
+	{
+		rstart = FastLED.size() - patternLength;
+		rend = 0;
+
+		lstart = 1;
+		lend = FastLED.size() - patternLength;
+	}
+	else
+	{
+		return;
+	}
+
+	// Fill with off color
+	fill(offColor, true);
+
+	// work until we have a new command
 	while (isCommandAvailable() == false)
 	{
 		if( direction == LEFT )
 		{
-			scrollPattern(pattern, LEFT, onColor, offColor, onTime, offTime, clearAfter, clearEnd);
-			if( commandDelay(bounceTime) ) return;
-			scrollPattern(pattern, RIGHT, onColor, offColor, onTime, offTime, clearAfter, clearEnd);
-			if( commandDelay(bounceTime) ) return;
+			for(int16_t i=lstart; i<=lend; i++ )
+			{
+				setPattern(i, patternLength, pattern, patternLength, onColor, offColor, true);
+				if (commandDelay(onTime)) break;
+				if( clearAfter )
+				{
+					fill(offColor, true);
+					if (commandDelay(offTime)) break;
+				}
+			}
+			if( clearEnd )
+			{
+				fill(offColor, true);
+				if (commandDelay(bounceTime)) break;
+			}
+
+			for(int16_t i=rstart; i>=rend; i-=1 )
+			{
+				setPattern(i, patternLength, pattern, patternLength, onColor, offColor, true);
+				if (commandDelay(onTime)) break;
+				if( clearAfter )
+				{
+					fill(offColor, true);
+					if (commandDelay(offTime)) break;
+				}
+			}
+			if( clearEnd )
+			{
+				fill(offColor, true);
+				if (commandDelay(bounceTime)) break;
+			}
+
+			if( first )
+			{
+				lstart = 1;
+				lend = FastLED.size() - patternLength - 1;
+				rstart = FastLED.size() - patternLength;
+				rend = 0;
+				first = false;
+			}
 		}
-		else if (direction == RIGHT )
+		else if(direction == RIGHT )
 		{
-			scrollPattern(pattern, RIGHT, onColor, offColor, onTime, offTime, clearAfter, clearEnd);
-			if( commandDelay(bounceTime) ) return;
-			scrollPattern(pattern, LEFT, onColor, offColor, onTime, offTime, clearAfter, clearEnd);
-			if( commandDelay(bounceTime) ) return;
+			for(int16_t i=rstart; i>=rend; i-=1 )
+			{
+				setPattern(i, patternLength, pattern, patternLength, onColor, offColor, true);
+				if (commandDelay(onTime)) break;
+				if( clearAfter )
+				{
+					fill(offColor, true);
+					if (commandDelay(offTime)) break;
+				}
+			}
+			if( clearEnd )
+			{
+				fill(offColor, true);
+				if (commandDelay(bounceTime)) break;
+			}
+			for(int16_t i=lstart; i<=lend; i++ )
+			{
+				setPattern(i, patternLength, pattern, patternLength, onColor, offColor, true);
+				if (commandDelay(onTime)) break;
+				if( clearAfter )
+				{
+					fill(offColor, true);
+					if (commandDelay(offTime)) break;
+				}
+			}
+			if( clearEnd )
+			{
+				fill(offColor, true);
+				if (commandDelay(bounceTime)) break;
+			}
+
+			if( first )
+			{
+				rstart = FastLED.size() - patternLength -1;
+				rend = 0;
+
+				lstart = 1;
+				lend = FastLED.size() - patternLength;
+				first = false;
+			}
+
 		}
-		count++;
-		if( repeat > 0 && count > repeat )
+
+		count += 1;
+		if( repeat > 0 && count >= repeat )
 		{
 			break;
 		}
+		if( duration > 0 && millis() > endTime )
+		{
+			break;
+		}
+
 	} // end while
 
-}
+} // end bounce
 
 
 /**
  * Starts in the middle and works out; or starts in the end and works in
  */
-void NeopixelWrapper::middle(uint16_t repeat, uint8_t direction, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime, uint8_t clearAfter, uint8_t clearEnd)
+void NeopixelWrapper::middle(uint16_t repeat, uint32_t duration, uint8_t direction, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime, uint8_t clearAfter, uint8_t clearEnd)
 {
 	uint16_t count = 0;
 	uint8_t numPixels = FastLED.size();
@@ -493,7 +611,7 @@ void NeopixelWrapper::middle(uint16_t repeat, uint8_t direction, CRGB onColor, C
 /**
  * Flashes random LED with specified color
  */
-void NeopixelWrapper::randomFlash(uint32_t runTime, uint32_t onTime, uint32_t offTime, CRGB onColor, CRGB offColor)
+void NeopixelWrapper::randomFlash(uint16_t repeat, uint32_t duration, uint32_t onTime, uint32_t offTime, CRGB onColor, CRGB offColor)
 {
 	uint8_t i;
 
@@ -559,7 +677,7 @@ void NeopixelWrapper::fade(uint8_t direction, uint8_t fadeIncrement, uint32_t ti
 /**
  * Flashes LEDs
  */
-void NeopixelWrapper::strobe(uint32_t duration, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime )
+void NeopixelWrapper::strobe(uint16_t repeat, uint32_t duration, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime )
 {
 	resetIntensity();
 
@@ -576,7 +694,7 @@ void NeopixelWrapper::strobe(uint32_t duration, CRGB onColor, CRGB offColor, uin
 /**
  * Creates lightning effort
  */
-void NeopixelWrapper::lightning(CRGB onColor, CRGB offColor)
+void NeopixelWrapper::lightning(uint16_t repeat, uint32_t duration, CRGB onColor, CRGB offColor)
 {
 
 	uint32_t count, large;
@@ -616,7 +734,7 @@ void NeopixelWrapper::lightning(CRGB onColor, CRGB offColor)
  *
  * @glitter if true, randomly pops white into rainbow pattern
  */
-void NeopixelWrapper::rainbow(uint32_t runTime, uint8_t glitterProbability, CRGB glitterColor, uint8_t fps)
+void NeopixelWrapper::rainbow(uint32_t duration, uint8_t glitterProbability, CRGB glitterColor, uint8_t fps)
 {
 	//TODO: Figure out to better control timing with FPS or hue update time
 
@@ -653,7 +771,7 @@ void NeopixelWrapper::rainbow(uint32_t runTime, uint8_t glitterProbability, CRGB
  * https://gist.github.com/kriegsman/964de772d64c502760e5
  *
  */
-void NeopixelWrapper::rainbowFade(uint32_t runTime, uint8_t fps)
+void NeopixelWrapper::rainbowFade(uint32_t duration, uint8_t fps)
 {
 	//TODO: Figure out to better control timing with FPS or hue update time
 
@@ -718,7 +836,7 @@ void NeopixelWrapper::rainbowFade(uint32_t runTime, uint8_t fps)
  * NOTE: runTime has no effect at this time
  *
  */
-void NeopixelWrapper::confetti(uint32_t runTime, CRGB color, uint8_t fadeBy, uint8_t fps)
+void NeopixelWrapper::confetti(uint32_t duration, CRGB color, uint8_t fadeBy, uint8_t fps)
 {
 	//TODO: Figure out to better control timing with FPS or hue update time
 
@@ -756,7 +874,7 @@ void NeopixelWrapper::confetti(uint32_t runTime, CRGB color, uint8_t fadeBy, uin
  * Creates "cylon" pattern - bright led followed up dimming LEDs back and forth
  *
  */
-void NeopixelWrapper::cylon(uint16_t repeat, CRGB color, uint32_t fadeTime, uint8_t fps)
+void NeopixelWrapper::cylon(uint16_t repeat, uint32_t duration, CRGB color, uint32_t fadeTime, uint8_t fps)
 {
 	//TODO: Figure out to better control timing with FPS or hue update time
 	uint16_t count = 0;
@@ -798,7 +916,7 @@ void NeopixelWrapper::cylon(uint16_t repeat, CRGB color, uint32_t fadeTime, uint
  * No clue how to explain this one...
  *
  */
-void NeopixelWrapper::bpm(uint32_t runTime, uint8_t fps)
+void NeopixelWrapper::bpm(uint16_t repeat, uint32_t duration, uint8_t fps)
 {
 	//TODO: Figure out to better control timing with FPS or hue update time
 	uint8_t frameTime = 1000/fps;
@@ -830,7 +948,7 @@ void NeopixelWrapper::bpm(uint32_t runTime, uint8_t fps)
  * No clue how to explain this one
  *
  */
-void NeopixelWrapper::juggle(uint32_t runTime, uint8_t fps)
+void NeopixelWrapper::juggle(uint16_t repeat, uint32_t duration, uint8_t fps)
 {
 	//TODO: Figure out to better control timing with FPS or hue update time
 	uint8_t frameTime = 1000/fps;
@@ -917,7 +1035,7 @@ void NeopixelWrapper::setPixelTimed(int16_t index, CRGB newColor, uint32_t onTim
  */
 void NeopixelWrapper::setPattern(int16_t startIndex, uint8_t length, uint8_t pattern, uint8_t patternLength, CRGB onColor, CRGB offColor, uint8_t show)
 {
-    uint8_t index = startIndex;
+    int16_t index;
     uint8_t patternIndex = 0;
 
 #ifdef __DEBUG
@@ -957,7 +1075,6 @@ void NeopixelWrapper::setPattern(int16_t startIndex, uint8_t length, uint8_t pat
 		}
 		else
 		{
-
 			// rotates pattern and tests for "on"
 			if ((pattern >> patternIndex) & 0x01)
 			{
@@ -988,7 +1105,8 @@ void NeopixelWrapper::setPattern(int16_t startIndex, uint8_t length, uint8_t pat
         {
         	patternIndex = 0;
         }
-    }
+
+    } // end for
 
     if( show )
     {

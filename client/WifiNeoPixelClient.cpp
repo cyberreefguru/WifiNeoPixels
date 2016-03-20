@@ -239,23 +239,23 @@ void parseCommand()
 			break;
 		case CMD_PATTERN:
 			Serial.println(F("PATTERN"));
-			controller.rotatePattern(cmd.getRepeat(), cmd.getPattern(), cmd.getDirection(), cmd.getOnColor(), cmd.getOffColor(), cmd.getOnTime(), cmd.getOffTime());
+			controller.rotatePattern(cmd.getRepeat(),cmd.getDuration(), cmd.getPattern(), cmd.getDirection(), cmd.getOnColor(), cmd.getOffColor(), cmd.getOnTime(), cmd.getOffTime());
 			break;
-		case CMD_WIPE:
-			Serial.println(F("WIPE"));
-			controller.scrollPattern(cmd.getPattern(), cmd.getDirection(), cmd.getOnColor(), cmd.getOffColor(), cmd.getOnTime(), cmd.getOffTime(), cmd.getClearAfter(), cmd.getClearEnd());
+		case CMD_SCROLL:
+			Serial.println(F("SCROLL"));
+			controller.scrollPattern(cmd.getRepeat(),cmd.getDuration(), cmd.getPattern(), cmd.getDirection(), cmd.getOnColor(), cmd.getOffColor(), cmd.getOnTime(), cmd.getOffTime(), cmd.getClearAfter(), cmd.getClearEnd());
 			break;
 		case CMD_BOUNCE:
 			Serial.println(F("BOUNCE"));
-			controller.bounce(cmd.getRepeat(), cmd.getPattern(), cmd.getDirection(), cmd.getOnColor(), cmd.getOffColor(), cmd.getOnTime(), cmd.getOffTime(), cmd.getBounceTime(), cmd.getClearAfter(), cmd.getClearEnd());
+			controller.bounce(cmd.getRepeat(), cmd.getDuration(), cmd.getPattern(), cmd.getPatternLength(), cmd.getDirection(), cmd.getOnColor(), cmd.getOffColor(), cmd.getOnTime(), cmd.getOffTime(), cmd.getBounceTime(), cmd.getClearAfter(), cmd.getClearEnd());
 			break;
 		case CMD_MIDDLE:
-			controller.middle(cmd.getRepeat(), cmd.getDirection(), cmd.getOnColor(), cmd.getOffColor(), cmd.getOnTime(), cmd.getOffTime(), cmd.getClearAfter(), cmd.getClearEnd());
+			controller.middle(cmd.getRepeat(),cmd.getDuration(), cmd.getDirection(), cmd.getOnColor(), cmd.getOffColor(), cmd.getOnTime(), cmd.getOffTime(), cmd.getClearAfter(), cmd.getClearEnd());
 			Serial.println(F("MIDDLE"));
 			break;
 		case CMD_RANDOM_FLASH:
 			Serial.println(F("RANDOM_FLASH"));
-			controller.randomFlash(0, cmd.getOnTime(), cmd.getOffTime(), cmd.getOnColor(), cmd.getOffColor());
+			controller.randomFlash(cmd.getRepeat(),cmd.getDuration(), cmd.getOnTime(), cmd.getOffTime(), cmd.getOnColor(), cmd.getOffColor());
 			break;
 		case CMD_FADE:
 			Serial.println(F("FADE"));
@@ -263,11 +263,11 @@ void parseCommand()
 			break;
 		case CMD_STROBE:
 			Serial.println(F("STROBE"));
-			controller.strobe(cmd.getDuration(), cmd.getOnColor(), cmd.getOffColor(), cmd.getOnTime(), cmd.getOffTime());
+			controller.strobe(cmd.getRepeat(),cmd.getDuration(), cmd.getOnColor(), cmd.getOffColor(), cmd.getOnTime(), cmd.getOffTime());
 			break;
 		case CMD_LIGHTNING:
 			Serial.println(F("LIGHTNING"));
-			controller.lightning(cmd.getOnColor(), cmd.getOffColor());
+			controller.lightning(cmd.getRepeat(),cmd.getDuration(), cmd.getOnColor(), cmd.getOffColor());
 			break;
 		case CMD_RAINBOW:
 			Serial.println(F("RAINBOW"));
@@ -283,15 +283,15 @@ void parseCommand()
 			break;
 		case CMD_CYLON:
 			Serial.println(F("CYLON"));
-			controller.cylon(cmd.getRepeat(), cmd.getOnColor(), cmd.getFadeTime(), cmd.getFramesPerSecond());
+			controller.cylon(cmd.getRepeat(),cmd.getDuration(), cmd.getOnColor(), cmd.getFadeTime(), cmd.getFramesPerSecond());
 			break;
 		case CMD_BPM:
 			Serial.println(F("BPM"));
-			controller.bpm(0, cmd.getFramesPerSecond());
+			controller.bpm(cmd.getRepeat(),cmd.getDuration(), cmd.getFramesPerSecond());
 			break;
 		case CMD_JUGGLE:
 			Serial.println(F("JUGGLE"));
-			controller.juggle(0, cmd.getFramesPerSecond());
+			controller.juggle(cmd.getRepeat(),cmd.getDuration(), cmd.getFramesPerSecond());
 			break;
 		case CMD_SET_HUE_UPDATE_TIME:
 			Serial.println(F("SET_HUE_UPDATE_TIME"));

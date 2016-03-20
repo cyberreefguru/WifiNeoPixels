@@ -26,6 +26,7 @@
 #define KEY_FPS						"fps"
 #define KEY_UPDATE_TIME				"udtime"
 #define KEY_PATTERN					"p"
+#define KEY_PATTERN_LENGTH			"pl"
 #define KEY_DURATION				"d"
 #define KEY_REPEAT					"r"
 #define KEY_DIRECTION				"dir"
@@ -48,20 +49,24 @@
 #define KEY_UNIQUE_ID				"uid"
 
 // Basic Functions
-#define CMD_FILL                0x01
-#define CMD_FILL_PATTERN        0x02
-#define CMD_SET_PIXEL			0x03
-#define CMD_SHOW				0x04
+#define CMD_FILL                0x01	// Fills strip with specified color
+#define CMD_FILL_PATTERN        0x02	// Fills strip with specified pattern
+#define CMD_SET_PIXEL			0x03	// Sets specific pixel specified color
+#define CMD_SHOW				0x04	// Shows pixels
 
 // Basic Animations
-#define CMD_PATTERN 			0x11
-#define CMD_WIPE			    0x12
-#define CMD_BOUNCE				0x13
+#define CMD_PATTERN 			0x11	// Fills with pattern and rotates pattern
+#define CMD_SCROLL			    0x12	// Scrolls pattern across strip
+#define CMD_BOUNCE				0x13 	//
 #define CMD_MIDDLE				0x14
 #define CMD_RANDOM_FLASH        0x15
 #define	CMD_FADE				0x16
 #define CMD_STROBE				0x17
 #define CMD_LIGHTNING			0x18
+
+// TODO: Stack
+// TODO: Random Fill
+
 
 // Advanced Functions
 #define CMD_RAINBOW             0x20
@@ -141,8 +146,13 @@ public:
 	void setOnTime(uint32_t onTime);
 	uint8_t getPattern() const;
 	void setPattern(uint8_t pattern);
+
+	uint8_t getPatternLength() const;
+	void setPatternLength(uint8_t length);
+
 	uint8_t getProbability() const;
 	void setProbability(uint8_t probability);
+
 	uint16_t getRepeat() const;
 	void setRepeat(uint16_t repeat);
 
@@ -184,6 +194,7 @@ private:
 
 	uint8_t index;
 	uint8_t pattern;
+	uint8_t patternLength;
 	uint32_t duration;
 	uint16_t repeat;
 	uint8_t direction;
