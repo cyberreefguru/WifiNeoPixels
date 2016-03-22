@@ -19,7 +19,7 @@ Features
 --------
 * MQTT channel driven using JSON
 * Variety of animation patterns
-* node-red node for controlling client (https://github.com/cyberreefguru/node-red/tree/master/nodes/node-red-contrib-led-animator)
+* node-red node for controlling client [led-animator](https://github.com/cyberreefguru/node-red/tree/master/nodes/node-red-contrib-led-animator)
 * Flexible command structure
 * MIT License
 
@@ -30,4 +30,4 @@ Works on
 Documentation
 -------------
 
-The documentation is available online in the [Arduino JSON wiki](https://github.com/bblanchon/ArduinoJson/wiki)
+The documentation is available online in the [WIFI Neopixel Client](https://github.com/cyberreefguru/WifiNeoPixels/wiki)
