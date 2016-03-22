@@ -646,7 +646,14 @@ void NeopixelWrapper::randomFlash(uint16_t repeat, uint32_t duration, uint32_t o
 	while (isCommandAvailable() == false)
 	{
 		i = random(FastLED.size());
-		leds[i] = onColor;
+		if( onColor == (CRGB)RAINBOW )
+		{
+			leds[i] = CHSV(random8(0, 255), 255, 255);
+		}
+		else
+		{
+			leds[i] = onColor;
+		}
 		FastLED.show();
 		if (commandDelay(onTime)) break;
 		leds[i] = offColor;
@@ -1180,7 +1187,7 @@ void NeopixelWrapper::stack(uint16_t repeat, uint32_t duration, uint8_t directio
 				FastLED.show();
 				index -= 1;
 			}
-		}
+		} // end for size
 
 		if( clearEnd == true )
 		{
