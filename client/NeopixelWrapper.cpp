@@ -184,10 +184,10 @@ void NeopixelWrapper::fillPattern(uint8_t pattern, CRGB onColor, CRGB offColor)
  */
 void NeopixelWrapper::rotatePattern(uint16_t repeat, uint32_t duration, uint8_t pattern, uint8_t direction, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime)
 {
-	uint16_t i, count;
+	uint16_t i = 0;
+	uint16_t count = 0;
+	uint32_t endTime = millis() + duration;
 
-	i = 0;
-	count = 0;
 	resetIntensity();
 
 	while (isCommandAvailable() == false)
@@ -221,8 +221,12 @@ void NeopixelWrapper::rotatePattern(uint16_t repeat, uint32_t duration, uint8_t 
 			pattern = pattern | i;
 		}
 
-		count++;
+		count += 1;
 		if( repeat > 0 && count >= repeat )
+		{
+			break;
+		}
+		if( duration > 0 && millis() > endTime )
 		{
 			break;
 		}
@@ -245,12 +249,10 @@ void NeopixelWrapper::rotatePattern(uint16_t repeat, uint32_t duration, uint8_t 
  * @clearAfter - turn LED off after waiting
  * @clearEnd - clear after complete
  */
-void NeopixelWrapper::scrollPattern(uint16_t repeat, uint32_t duration, uint8_t pattern, uint8_t direction, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime, uint8_t clearAfter, uint8_t clearEnd)
+void NeopixelWrapper::scrollPattern(uint16_t repeat, uint32_t duration, uint8_t pattern, uint8_t patternLength, uint8_t direction, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime, uint8_t clearAfter, uint8_t clearEnd)
 {
-
-	// TODO - implement pattern length
-
-	uint8_t patternLength = 8;
+	uint16_t count = 0;
+	uint32_t endTime = millis() + duration;
 
 	CRGB pixels[patternLength];
 	int16_t curIndex;
@@ -274,115 +276,130 @@ void NeopixelWrapper::scrollPattern(uint16_t repeat, uint32_t duration, uint8_t 
 	// clear LEDs
 	fill(offColor, true);
 
-	// Loop through all LEDs (plus some)
-	for(int16_t j=0; j<(FastLED.size()+patternLength-1); j++ )
+
+	while (isCommandAvailable() == false)
 	{
-		// Set start location
-		if( direction == LEFT )
+		// Loop through all LEDs (plus some)
+		for(int16_t j=0; j<(FastLED.size()+patternLength-1); j++ )
 		{
-			if( (j >= (patternLength-1)) && (j <= (FastLED.size() - 1)) )
+			// Set start location
+			if( direction == LEFT )
 			{
-				// copy all pixels to leds
-				curIndex = j;
-				for(uint8_t i=0; i<patternLength; i++)
+				if( (j >= (patternLength-1)) && (j <= (FastLED.size() - 1)) )
 				{
-					leds[curIndex--] = pixels[i];
+					// copy all pixels to leds
+					curIndex = j;
+					for(uint8_t i=0; i<patternLength; i++)
+					{
+						leds[curIndex--] = pixels[i];
+					}
 				}
-			}
-			else if( j <= (patternLength-1) )
-			{
-				curIndex = j;
-				uint8_t bitsToCopy = j+1;
+				else if( j <= (patternLength-1) )
+				{
+					curIndex = j;
+					uint8_t bitsToCopy = j+1;
 
-				for(uint8_t i=0; i< bitsToCopy; i++)
-				{
-					leds[curIndex--] = pixels[i];
+					for(uint8_t i=0; i< bitsToCopy; i++)
+					{
+						leds[curIndex--] = pixels[i];
+					}
 				}
-			}
-			else if(j > (FastLED.size()-1))
-			{
-				curIndex = FastLED.size()-1;
-				uint8_t bitsToCopy = (patternLength-1) - (j-FastLED.size());
-				uint8_t start = (patternLength-bitsToCopy);
-#ifdef __DEBUG
-				Serial.print(F("j="));
-				Serial.print(j);
-				Serial.print(F(", curIndex="));
-				Serial.print(curIndex);
-				Serial.print(F(", bitsToCopy="));
-				Serial.print(bitsToCopy);
-				Serial.print(F(", start="));
-				Serial.println(start);
-#endif
-				for(uint8_t i=start; i< 8; i++)
+				else if(j > (FastLED.size()-1))
 				{
-#ifdef __DEBUG
-					Serial.print(F("curIndex="));
+					curIndex = FastLED.size()-1;
+					uint8_t bitsToCopy = (patternLength-1) - (j-FastLED.size());
+					uint8_t start = (patternLength-bitsToCopy);
+	#ifdef __DEBUG
+					Serial.print(F("j="));
+					Serial.print(j);
+					Serial.print(F(", curIndex="));
 					Serial.print(curIndex);
-					Serial.print(F(", i="));
-					Serial.println(i);
-#endif
-					leds[curIndex--] = pixels[i];
+					Serial.print(F(", bitsToCopy="));
+					Serial.print(bitsToCopy);
+					Serial.print(F(", start="));
+					Serial.println(start);
+	#endif
+					for(uint8_t i=start; i< 8; i++)
+					{
+	#ifdef __DEBUG
+						Serial.print(F("curIndex="));
+						Serial.print(curIndex);
+						Serial.print(F(", i="));
+						Serial.println(i);
+	#endif
+						leds[curIndex--] = pixels[i];
+					}
 				}
-			}
-		} // end if LEFT
-		else if(direction == RIGHT )
-		{
-			if( (j >= (patternLength-1)) && (j <= (FastLED.size() - 1)) )
+			} // end if LEFT
+			else if(direction == RIGHT )
 			{
-				// copy all pixels to leds
-				curIndex = FastLED.size() - j - 1;
-				for(uint8_t i=0; i<patternLength; i++)
+				if( (j >= (patternLength-1)) && (j <= (FastLED.size() - 1)) )
 				{
-					leds[curIndex++] = pixels[i];
+					// copy all pixels to leds
+					curIndex = FastLED.size() - j - 1;
+					for(uint8_t i=0; i<patternLength; i++)
+					{
+						leds[curIndex++] = pixels[i];
+					}
 				}
-			}
-			else if( j < (patternLength-1) )
-			{
-				curIndex = FastLED.size() - j - 1;
-				uint8_t bitsToCopy = FastLED.size() - curIndex;
+				else if( j < (patternLength-1) )
+				{
+					curIndex = FastLED.size() - j - 1;
+					uint8_t bitsToCopy = FastLED.size() - curIndex;
 
-				for(uint8_t i=0; i< bitsToCopy; i++)
-				{
-					leds[curIndex++] = pixels[i];
+					for(uint8_t i=0; i< bitsToCopy; i++)
+					{
+						leds[curIndex++] = pixels[i];
+					}
 				}
-			}
-			else if(j > (FastLED.size()-1))
-			{
-				curIndex = 0;
-				uint8_t bitsToCopy = (patternLength-1) - (j-FastLED.size());
-				uint8_t start = (patternLength-bitsToCopy);
-#ifdef __DEBUG
-				Serial.print(F("j="));
-				Serial.print(j);
-				Serial.print(F(", curIndex="));
-				Serial.print(curIndex);
-				Serial.print(F(", bitsToCopy="));
-				Serial.print(bitsToCopy);
-				Serial.print(F(", start="));
-				Serial.println(start);
-#endif
-				for(uint8_t i=start; i< 8; i++)
+				else if(j > (FastLED.size()-1))
 				{
-#ifdef __DEBUG
-					Serial.print(F("curIndex="));
+					curIndex = 0;
+					uint8_t bitsToCopy = (patternLength-1) - (j-FastLED.size());
+					uint8_t start = (patternLength-bitsToCopy);
+	#ifdef __DEBUG
+					Serial.print(F("j="));
+					Serial.print(j);
+					Serial.print(F(", curIndex="));
 					Serial.print(curIndex);
-					Serial.print(F(", i="));
-					Serial.println(i);
-#endif
-					leds[curIndex++] = pixels[i];
+					Serial.print(F(", bitsToCopy="));
+					Serial.print(bitsToCopy);
+					Serial.print(F(", start="));
+					Serial.println(start);
+	#endif
+					for(uint8_t i=start; i< 8; i++)
+					{
+	#ifdef __DEBUG
+						Serial.print(F("curIndex="));
+						Serial.print(curIndex);
+						Serial.print(F(", i="));
+						Serial.println(i);
+	#endif
+						leds[curIndex++] = pixels[i];
+					}
 				}
-			}
-		} //end if RIGHT
+			} //end if RIGHT
 
-		FastLED.show();
-		commandDelay(onTime);
-		if( clearAfter )
+			FastLED.show();
+			commandDelay(onTime);
+			if( clearAfter )
+			{
+				fill(offColor, false);
+			}
+
+		} // end for j
+
+		count += 1;
+		if( repeat > 0 && count >= repeat )
 		{
-			fill(offColor, false);
+			break;
+		}
+		if( duration > 0 && millis() > endTime )
+		{
+			break;
 		}
 
-	} // end for j
+	} // end while
 
 	if( clearEnd )
 	{
@@ -548,14 +565,14 @@ void NeopixelWrapper::bounce(uint16_t repeat, uint32_t duration, uint8_t pattern
 void NeopixelWrapper::middle(uint16_t repeat, uint32_t duration, uint8_t direction, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime, uint8_t clearAfter, uint8_t clearEnd)
 {
 	uint16_t count = 0;
+	uint32_t endTime = millis() + duration;;
+
 	uint8_t numPixels = FastLED.size();
 	uint8_t halfNumPixels = numPixels/2;
 
 	resetIntensity();
-	if(clearEnd)
-	{
-		fill(offColor, true);
-	}
+	fill(offColor, true);
+
 	while (isCommandAvailable() == false)
 	{
 		if(direction == IN)
@@ -599,8 +616,13 @@ void NeopixelWrapper::middle(uint16_t repeat, uint32_t duration, uint8_t directi
 			fill(offColor, true);
 		}
 
-		count++;
-		if( repeat > 0 && count > repeat )
+		count += 1;
+		if( repeat > 0 && count >= repeat )
+		{
+			break;
+		}
+
+		if( duration > 0 && millis() > endTime )
 		{
 			break;
 		}
@@ -613,6 +635,9 @@ void NeopixelWrapper::middle(uint16_t repeat, uint32_t duration, uint8_t directi
  */
 void NeopixelWrapper::randomFlash(uint16_t repeat, uint32_t duration, uint32_t onTime, uint32_t offTime, CRGB onColor, CRGB offColor)
 {
+	uint16_t count = 0;
+	uint32_t endTime = millis() + duration;;
+
 	uint8_t i;
 
 	resetIntensity();
@@ -626,6 +651,18 @@ void NeopixelWrapper::randomFlash(uint16_t repeat, uint32_t duration, uint32_t o
 		if (commandDelay(onTime)) break;
 		leds[i] = offColor;
 		if (commandDelay(offTime)) break;
+
+		count += 1;
+		if( repeat > 0 && count >= repeat )
+		{
+			break;
+		}
+
+		if( duration > 0 && millis() > endTime )
+		{
+			break;
+		}
+
 	}
 
 	fill(offColor, true);
@@ -679,6 +716,9 @@ void NeopixelWrapper::fade(uint8_t direction, uint8_t fadeIncrement, uint32_t ti
  */
 void NeopixelWrapper::strobe(uint16_t repeat, uint32_t duration, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime )
 {
+	uint16_t count = 0;
+	uint32_t endTime = millis() + duration;;
+
 	resetIntensity();
 
 	while( isCommandAvailable() == false )
@@ -687,7 +727,19 @@ void NeopixelWrapper::strobe(uint16_t repeat, uint32_t duration, CRGB onColor, C
 		if( commandDelay(onTime) ) break;
 		fill(offColor, true);
 		if( commandDelay(offTime) ) break;
-	}
+
+		count += 1;
+		if( repeat > 0 && count >= repeat )
+		{
+			break;
+		}
+
+		if( duration > 0 && millis() > endTime )
+		{
+			break;
+		}
+
+	} // end while command
 }
 
 
@@ -696,37 +748,54 @@ void NeopixelWrapper::strobe(uint16_t repeat, uint32_t duration, CRGB onColor, C
  */
 void NeopixelWrapper::lightning(uint16_t repeat, uint32_t duration, CRGB onColor, CRGB offColor)
 {
+	uint16_t count = 0;
+	uint32_t endTime = millis() + duration;;
 
-	uint32_t count, large;
+	uint32_t lc, large;
 	uint8_t i, b;
 
 	b = false;
 	resetIntensity();
 
-	count = random(2, 6);
-	for(i=0; i<count; i++)
+    while(isCommandAvailable() == false )
 	{
-		large = random(0,100);
-		fill(onColor, true);
-		if( large > 40 && b == false)
+		lc = random(2, 6);
+		for(i=0; i<count; i++)
 		{
-			if( commandDelay(random(100, 350)) ) break;
-			b = true;
+			large = random(0,100);
+			fill(onColor, true);
+			if( large > 40 && b == false)
+			{
+				if( commandDelay(random(100, 350)) ) break;
+				b = true;
+			}
+			else
+			{
+				if( commandDelay(random(20, 50)) ) break;
+			}
+			fill(offColor, true);
+			if( large > 40 && b == false )
+			{
+				if( commandDelay(random(200, 500)) ) break;
+			}
+			else
+			{
+				if( commandDelay(random(30, 70)) ) break;
+			}
 		}
-		else
+
+		count += 1;
+		if( repeat > 0 && count >= repeat )
 		{
-			if( commandDelay(random(20, 50)) ) break;
+			break;
 		}
-		fill(offColor, true);
-		if( large > 40 && b == false )
+
+		if( duration > 0 && millis() > endTime )
 		{
-			if( commandDelay(random(200, 500)) ) break;
+			break;
 		}
-		else
-		{
-			if( commandDelay(random(30, 70)) ) break;
-		}
-	}
+
+	} // end while command
 }
 
 /**
@@ -736,6 +805,8 @@ void NeopixelWrapper::lightning(uint16_t repeat, uint32_t duration, CRGB onColor
  */
 void NeopixelWrapper::rainbow(uint32_t duration, uint8_t glitterProbability, CRGB glitterColor, uint8_t fps)
 {
+	uint32_t endTime = millis() + duration;;
+
 	//TODO: Figure out to better control timing with FPS or hue update time
 
 	uint8_t frameTime = 1000/fps;
@@ -762,7 +833,13 @@ void NeopixelWrapper::rainbow(uint32_t duration, uint8_t glitterProbability, CRG
         {
             gHue++;
         } // slowly cycle the "base color" through the rainbow
-    }
+
+		if( duration > 0 && millis() > endTime )
+		{
+			break;
+		}
+
+    } // end while command
 
 } // end rainbow
 
@@ -773,6 +850,8 @@ void NeopixelWrapper::rainbow(uint32_t duration, uint8_t glitterProbability, CRG
  */
 void NeopixelWrapper::rainbowFade(uint32_t duration, uint8_t fps)
 {
+	uint32_t endTime = millis() + duration;;
+
 	//TODO: Figure out to better control timing with FPS or hue update time
 
 	uint8_t frameTime = 1000/fps;
@@ -822,7 +901,13 @@ void NeopixelWrapper::rainbowFade(uint32_t duration, uint8_t fps)
 
         FastLED.show();
         commandDelay( frameTime );
-    }
+
+		if( duration > 0 && millis() > endTime )
+		{
+			break;
+		}
+
+    } // end while command
 
 } // end rainbow fade
 
@@ -838,6 +923,8 @@ void NeopixelWrapper::rainbowFade(uint32_t duration, uint8_t fps)
  */
 void NeopixelWrapper::confetti(uint32_t duration, CRGB color, uint8_t fadeBy, uint8_t fps)
 {
+	uint32_t endTime = millis() + duration;;
+
 	//TODO: Figure out to better control timing with FPS or hue update time
 
 	uint8_t frameTime = 1000/fps;
@@ -865,7 +952,12 @@ void NeopixelWrapper::confetti(uint32_t duration, CRGB color, uint8_t fadeBy, ui
         FastLED.show();
         commandDelay( frameTime );
 
-    }
+		if( duration > 0 && millis() > endTime )
+		{
+			break;
+		}
+
+    } // end while command
 
 } // end confetti
 
@@ -876,9 +968,12 @@ void NeopixelWrapper::confetti(uint32_t duration, CRGB color, uint8_t fadeBy, ui
  */
 void NeopixelWrapper::cylon(uint16_t repeat, uint32_t duration, CRGB color, uint32_t fadeTime, uint8_t fps)
 {
-	//TODO: Figure out to better control timing with FPS or hue update time
 	uint16_t count = 0;
-	repeat = FastLED.size()*repeat;
+	uint32_t endTime = millis() + duration;;
+	uint8_t flag = false; // flag to increment counter
+
+	//TODO: Figure out to better control timing with FPS or hue update time
+
 	resetIntensity();
 
     while(isCommandAvailable() == false )
@@ -903,21 +998,36 @@ void NeopixelWrapper::cylon(uint16_t repeat, uint32_t duration, CRGB color, uint
         FastLED.show();
         commandDelay( fadeTime );
 
-		count++;
-		if( repeat > 0 && count > repeat )
+        if( pos == 0 && flag == false)
+        {
+			count += 1;
+			flag = true; // set flag
+        }
+        if( flag == true && pos != 0 )
+        {
+        	flag = false; // wait for beats to go past 0
+        }
+		if( repeat > 0 && count >= repeat )
+		{
+			break;
+		}
+		if( duration > 0 && millis() > endTime )
 		{
 			break;
 		}
 
-    }
+    } // end while command
+
 } // end cylon
 
 /**
  * No clue how to explain this one...
  *
  */
-void NeopixelWrapper::bpm(uint16_t repeat, uint32_t duration, uint8_t fps)
+void NeopixelWrapper::bpm(uint32_t duration, uint8_t fps)
 {
+	uint32_t endTime = millis() + duration;;
+
 	//TODO: Figure out to better control timing with FPS or hue update time
 	uint8_t frameTime = 1000/fps;
 	resetIntensity();
@@ -940,6 +1050,12 @@ void NeopixelWrapper::bpm(uint16_t repeat, uint32_t duration, uint8_t fps)
 
         FastLED.show();
         commandDelay( frameTime );
+
+		if( duration > 0 && millis() > endTime )
+		{
+			break;
+		}
+
     }
 
 }
@@ -948,8 +1064,10 @@ void NeopixelWrapper::bpm(uint16_t repeat, uint32_t duration, uint8_t fps)
  * No clue how to explain this one
  *
  */
-void NeopixelWrapper::juggle(uint16_t repeat, uint32_t duration, uint8_t fps)
+void NeopixelWrapper::juggle(uint32_t duration, uint8_t fps)
 {
+	uint32_t endTime = millis() + duration;;
+
 	//TODO: Figure out to better control timing with FPS or hue update time
 	uint8_t frameTime = 1000/fps;
 	resetIntensity();
@@ -967,8 +1085,190 @@ void NeopixelWrapper::juggle(uint16_t repeat, uint32_t duration, uint8_t fps)
 
         FastLED.show();
         commandDelay( frameTime );
+
+		if( duration > 0 && millis() > endTime )
+		{
+			break;
+		}
+
     }
 }
+
+/**
+ * Stacks LEDs based on direction
+ *
+ */
+void NeopixelWrapper::stack(uint16_t repeat, uint32_t duration, uint8_t direction, CRGB onColor, CRGB offColor, uint32_t onTime, uint8_t clearEnd)
+{
+	uint8_t index;
+	uint16_t count;
+	uint32_t endTime;
+
+	resetIntensity();
+	fill(offColor, true);
+
+	count = 0;
+	endTime = millis() + duration;
+
+	while(isCommandAvailable() == false )
+    {
+
+		if( direction == DOWN )
+		{
+			index = 0;
+		}
+		else
+		{
+			index = FastLED.size()-1;
+		}
+
+		for(uint8_t i=0; i<FastLED.size(); i++ )
+		{
+			if(direction == DOWN )
+			{
+				for(int16_t j=FastLED.size(); j>index; j -= 1 )
+				{
+					if( onColor == (CRGB)RAINBOW )
+					{
+						leds[j] = CHSV(random8(0, 255), 255, 255);
+					}
+					else
+					{
+						leds[j] = onColor;
+					}
+					FastLED.show();
+					if( commandDelay( onTime) ) return;
+					leds[j] = offColor;
+					FastLED.show();
+				}
+				if( onColor == (CRGB)RAINBOW )
+				{
+					leds[index] = CHSV(random8(0, 255), 255, 255);
+				}
+				else
+				{
+					leds[index] = onColor;
+				}
+				FastLED.show();
+				index += 1;
+			}
+			else if( direction == UP )
+			{
+				for(int16_t j=0; j<index; j += 1 )
+				{
+					if( onColor == (CRGB)RAINBOW )
+					{
+						leds[j] = CHSV(random8(0, 255), 255, 255);
+					}
+					else
+					{
+						leds[j] = onColor;
+					}
+					FastLED.show();
+					if( commandDelay( onTime) ) return;
+					leds[j] = offColor;
+					FastLED.show();
+				}
+				if( onColor == (CRGB)RAINBOW )
+				{
+					leds[index] = CHSV(random8(0, 255), 255, 255);
+				}
+				else
+				{
+					leds[index] = onColor;
+				}
+				FastLED.show();
+				index -= 1;
+			}
+		}
+
+		if( clearEnd == true )
+		{
+			fill(offColor, true);
+		}
+
+		count += 1;
+		if( repeat > 0 && count >= repeat )
+		{
+			break;
+		}
+
+		if( duration > 0 && millis() > endTime )
+		{
+			break;
+		}
+
+
+	} // end while command == false
+
+} // end stack
+
+/**
+ * Randomly fills string with specified color
+ *
+ */
+void NeopixelWrapper::fillRandom(uint16_t repeat, uint32_t duration, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime, uint8_t clearAfter, uint8_t clearEnd)
+{
+	uint8_t total;
+	uint8_t index;
+	uint16_t count;
+	uint32_t endTime;
+	uint8_t flag = false;
+
+	resetIntensity();
+	fill(offColor, true);
+
+	count = 0;
+	endTime = millis() + duration;
+
+	CRGB color = onColor;
+
+	while(isCommandAvailable() == false )
+    {
+		total = FastLED.size();
+		while( total > 0 )
+		{
+			index = random8(0, FastLED.size());
+			if( onColor == (CRGB)RAINBOW )
+			{
+				color = CHSV(random8(0, 255), 255, 255);
+			}
+			if( leds[index] == offColor || flag == true )
+			{
+				leds[index] = color;
+				FastLED.show();
+				total--;
+				if( commandDelay(onTime)) return;
+				if( clearAfter )
+				{
+					leds[index] = offColor;
+					if( commandDelay(offTime)) return;
+				}
+			}
+		}
+		flag = true;
+		if( clearEnd )
+		{
+			fill(offColor, true);
+			flag = false;
+		}
+
+		count += 1;
+		if( repeat > 0 && count >= repeat )
+		{
+			break;
+		}
+
+		if( duration > 0 && millis() > endTime )
+		{
+			break;
+		}
+
+	} // while command == false
+
+
+} // end randomFill
+
 
 ////////////////////////////////////////
 // BEGIN PRIVATE FUNCTIONS

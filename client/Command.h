@@ -57,12 +57,14 @@
 // Basic Animations
 #define CMD_PATTERN 			0x11	// Fills with pattern and rotates pattern
 #define CMD_SCROLL			    0x12	// Scrolls pattern across strip
-#define CMD_BOUNCE				0x13 	//
-#define CMD_MIDDLE				0x14
-#define CMD_RANDOM_FLASH        0x15
-#define	CMD_FADE				0x16
-#define CMD_STROBE				0x17
-#define CMD_LIGHTNING			0x18
+#define CMD_BOUNCE				0x13 	// Bounces pattern back and forth
+#define CMD_MIDDLE				0x14	// Starts in middle and fills out
+#define CMD_RANDOM_FLASH        0x15	// Randomly flashes pixels
+#define	CMD_FADE				0x16	// Fades pixels
+#define CMD_STROBE				0x17	// Rapid flash pixels
+#define CMD_LIGHTNING			0x18	// Simulates lightning
+#define CMD_STACK				0x19	// Progressively stacks pixels
+#define CMD_FILL_RANDOM			0x1A	// Randomly fills pixels
 
 // TODO: Stack
 // TODO: Random Fill

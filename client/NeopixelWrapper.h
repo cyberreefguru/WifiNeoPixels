@@ -73,20 +73,23 @@ public:
     void fillPattern(uint8_t pattern, CRGB onColor, CRGB offColor);
 
     void rotatePattern(uint16_t repeat, uint32_t duration, uint8_t pattern, uint8_t direction, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime);
-    void scrollPattern(uint16_t repeat, uint32_t duration, uint8_t pattern, uint8_t direction, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime, uint8_t clearAfter, uint8_t clearEnd);
+    void scrollPattern(uint16_t repeat, uint32_t duration, uint8_t pattern, uint8_t patternLength, uint8_t direction, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime, uint8_t clearAfter, uint8_t clearEnd);
     void bounce(uint16_t repeat, uint32_t duration, uint8_t pattern, uint8_t patternLength, uint8_t direction, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime, uint32_t bounceTime, uint8_t clearAfter, uint8_t clearEnd);
-    void middle(uint16_t repeat, uint32_t duration, uint8_t direction, CRGB color1, CRGB color2, uint32_t onTime, uint32_t offTime, uint8_t clearAfter, uint8_t clearEnd);
+    void middle(uint16_t repeat, uint32_t duration, uint8_t direction, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime, uint8_t clearAfter, uint8_t clearEnd);
     void randomFlash(uint16_t repeat, uint32_t duration, uint32_t onTime, uint32_t offTime, CRGB onColor, CRGB offColor);
     void fade(uint8_t direction, uint8_t fadeIncrement, uint32_t time, CRGB color);
     void strobe(uint16_t repeat, uint32_t duration, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime );
     void lightning(uint16_t repeat, uint32_t duration, CRGB onColor, CRGB offColor);
 
+    void stack(uint16_t repeat, uint32_t duration, uint8_t direction, CRGB onColor, CRGB offColor, uint32_t onTime, uint8_t clearEnd);
+    void fillRandom(uint16_t repeat, uint32_t duration, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime, uint8_t clearAfter, uint8_t clearEnd);
+
     void rainbow(uint32_t duration, uint8_t glitterProbability, CRGB glitterColor, uint8_t fps);
     void rainbowFade(uint32_t duration, uint8_t fps);
 	void confetti(uint32_t duration, CRGB color, uint8_t fadeBy, uint8_t fps);
 	void cylon(uint16_t repeat, uint32_t duration, CRGB color, uint32_t fadeTime, uint8_t fps);
-	void bpm(uint16_t repeat, uint32_t duration, uint8_t fps);
-	void juggle(uint16_t repeat, uint32_t duration, uint8_t fps);
+	void bpm(uint32_t duration, uint8_t fps);
+	void juggle(uint32_t duration, uint8_t fps);
 
 protected:
 	CRGB *leds;

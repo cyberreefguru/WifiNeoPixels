@@ -243,7 +243,7 @@ void parseCommand()
 			break;
 		case CMD_SCROLL:
 			Serial.println(F("SCROLL"));
-			controller.scrollPattern(cmd.getRepeat(),cmd.getDuration(), cmd.getPattern(), cmd.getDirection(), cmd.getOnColor(), cmd.getOffColor(), cmd.getOnTime(), cmd.getOffTime(), cmd.getClearAfter(), cmd.getClearEnd());
+			controller.scrollPattern(cmd.getRepeat(),cmd.getDuration(), cmd.getPattern(), cmd.getPatternLength(), cmd.getDirection(), cmd.getOnColor(), cmd.getOffColor(), cmd.getOnTime(), cmd.getOffTime(), cmd.getClearAfter(), cmd.getClearEnd());
 			break;
 		case CMD_BOUNCE:
 			Serial.println(F("BOUNCE"));
@@ -269,29 +269,37 @@ void parseCommand()
 			Serial.println(F("LIGHTNING"));
 			controller.lightning(cmd.getRepeat(),cmd.getDuration(), cmd.getOnColor(), cmd.getOffColor());
 			break;
+		case CMD_STACK:
+			Serial.println(F("STACK"));
+			controller.stack(cmd.getRepeat(), cmd.getDuration(), cmd.getDirection(), cmd.getOnColor(), cmd.getOffColor(), cmd.getOnTime(), cmd.getClearEnd() );
+			break;
+		case CMD_FILL_RANDOM:
+			Serial.println(F("RANDOM FILL"));
+			controller.fillRandom(cmd.getRepeat(), cmd.getDuration(), cmd.getOnColor(), cmd.getOffColor(), cmd.getOnTime(), cmd.getOffTime(), cmd.getClearAfter(), cmd.getClearEnd());
+			break;
 		case CMD_RAINBOW:
 			Serial.println(F("RAINBOW"));
-			controller.rainbow(0, cmd.getProbability(), cmd.getOnColor(), cmd.getFramesPerSecond());
+			controller.rainbow(cmd.getDuration(), cmd.getProbability(), cmd.getOnColor(), cmd.getFramesPerSecond());
 			break;
 		case CMD_RAINBOW_FADE:
 			Serial.println(F("RAINBOW_FADE"));
-			controller.rainbowFade(0, cmd.getFramesPerSecond());
+			controller.rainbowFade(cmd.getDuration(), cmd.getFramesPerSecond());
 			break;
 		case CMD_CONFETTI:
 			Serial.println(F("CONFETTI"));
-			controller.confetti(0, cmd.getOnColor(), cmd.getFadeBy(), cmd.getFramesPerSecond());
+			controller.confetti(cmd.getDuration(), cmd.getOnColor(), cmd.getFadeBy(), cmd.getFramesPerSecond());
 			break;
 		case CMD_CYLON:
 			Serial.println(F("CYLON"));
-			controller.cylon(cmd.getRepeat(),cmd.getDuration(), cmd.getOnColor(), cmd.getFadeTime(), cmd.getFramesPerSecond());
+			controller.cylon(cmd.getRepeat(), cmd.getDuration(), cmd.getOnColor(), cmd.getFadeTime(), cmd.getFramesPerSecond());
 			break;
 		case CMD_BPM:
 			Serial.println(F("BPM"));
-			controller.bpm(cmd.getRepeat(),cmd.getDuration(), cmd.getFramesPerSecond());
+			controller.bpm(cmd.getDuration(), cmd.getFramesPerSecond());
 			break;
 		case CMD_JUGGLE:
 			Serial.println(F("JUGGLE"));
-			controller.juggle(cmd.getRepeat(),cmd.getDuration(), cmd.getFramesPerSecond());
+			controller.juggle(cmd.getDuration(), cmd.getFramesPerSecond());
 			break;
 		case CMD_SET_HUE_UPDATE_TIME:
 			Serial.println(F("SET_HUE_UPDATE_TIME"));
