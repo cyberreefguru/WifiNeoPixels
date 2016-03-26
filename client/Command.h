@@ -65,9 +65,7 @@
 #define CMD_LIGHTNING			0x18	// Simulates lightning
 #define CMD_STACK				0x19	// Progressively stacks pixels
 #define CMD_FILL_RANDOM			0x1A	// Randomly fills pixels
-
-// TODO: Stack
-// TODO: Random Fill
+#define CMD_WIPE				0x1B	// Wipes a single pixel
 
 
 // Advanced Functions

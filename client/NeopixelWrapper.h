@@ -72,6 +72,7 @@ public:
     void fill(CRGB color, uint8_t show);
     void fillPattern(uint8_t pattern, CRGB onColor, CRGB offColor);
 
+    void wipe(uint16_t repeat, uint32_t duration, uint8_t direction, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime, uint8_t clearAfter, uint8_t clearEnd);
     void rotatePattern(uint16_t repeat, uint32_t duration, uint8_t pattern, uint8_t direction, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime);
     void scrollPattern(uint16_t repeat, uint32_t duration, uint8_t pattern, uint8_t patternLength, uint8_t direction, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime, uint8_t clearAfter, uint8_t clearEnd);
     void bounce(uint16_t repeat, uint32_t duration, uint8_t pattern, uint8_t patternLength, uint8_t direction, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime, uint32_t bounceTime, uint8_t clearAfter, uint8_t clearEnd);

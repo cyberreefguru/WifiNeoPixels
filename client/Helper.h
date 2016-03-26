@@ -15,6 +15,11 @@
 #define ERROR_CONFIG			3
 #define ERROR_GENERAL			20
 
+#define STATE_LED_WAITING 	0
+#define	STATE_LED_COMMAND	1
+#define STATE_LED_ERROR		2
+
+
 
 class Helper
 {
@@ -40,6 +45,8 @@ extern "C"
 extern void worker();
 extern uint8_t isCommandAvailable();
 extern uint8_t commandDelay(uint32_t time);
+
+extern volatile uint8_t gLedState;
 
 #ifdef __cplusplus
 } // extern "C"

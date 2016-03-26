@@ -178,6 +178,86 @@ void NeopixelWrapper::fillPattern(uint8_t pattern, CRGB onColor, CRGB offColor)
 }
 
 /**
+ * Turns on LEDs one at time in sequence.  LEFT = 0->n; RIGHT = n -> 0
+ *
+ * @direction - left (up) or right (down)
+ * @onColor - color to fill LEDs with
+ * @offColor - color to fill LEDs with
+ * @onTime - time to keep LED on
+ * @offTime - time to keep LED off
+ * @clearAfter - turn LED off after waiting
+ * @clearEnd - clear after complete
+ */
+void NeopixelWrapper::wipe(uint16_t repeat, uint32_t duration, uint8_t direction, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime, uint8_t clearAfter, uint8_t clearEnd)
+{
+	uint16_t count = 0;
+	uint32_t endTime = millis() + duration;
+
+	int16_t curIndex;
+
+	resetIntensity();
+
+	// clear LEDs
+	fill(offColor, true);
+
+	while (isCommandAvailable() == false)
+	{
+		// Set start location
+		if( direction == LEFT )
+		{
+			// Loop through all LEDs
+			for(uint8_t j=0; j<FastLED.size(); j++ )
+			{
+				leds[j] = onColor;
+				FastLED.show();
+				if( commandDelay(onTime) ) break;
+				if( clearAfter )
+				{
+					leds[j] = offColor;
+					FastLED.show();
+					if( commandDelay(offTime) ) break;
+				}
+
+			} // end for j
+
+		} // end if LEFT
+		else if(direction == RIGHT )
+		{
+			// Loop through all LEDs
+			for(int16_t j=FastLED.size()-1; j>=0; j -=1 )
+			{
+				leds[j] = onColor;
+				FastLED.show();
+				if( commandDelay(onTime) ) break;
+				if( clearAfter )
+				{
+					leds[j] = offColor;
+					FastLED.show();
+					if( commandDelay(offTime) ) break;
+				}
+
+			} // end for j
+		} //end if RIGHT
+
+		count += 1;
+		if( repeat > 0 && count >= repeat )
+		{
+			break;
+		}
+		if( duration > 0 && millis() > endTime )
+		{
+			break;
+		}
+
+	} // end while
+
+	if( clearEnd )
+	{
+		fill(offColor, true);
+	}
+}
+
+/**
  * Rotates a pattern across the strip; onTime determines pause between rotation
  *
  * NOTE: Starts at 0, and repeats every 8 pixels through end of strip

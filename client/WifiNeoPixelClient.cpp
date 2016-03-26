@@ -16,6 +16,8 @@ static Menu menu;
 
 // software timer instance
 os_timer_t ledTimer;
+volatile uint8_t gLedCounter;
+volatile uint8_t gLedState;
 
 // Indicates we have a command waiting for processing
 static volatile uint8_t commandAvailable = false;
@@ -38,6 +40,9 @@ void setup()
 	Serial.println(F("\n\rLED Controller Powered Up"));
 
 	// Basic HW setup
+
+	// This pauses the start process so the user can do things like
+	// attach to the serial port and look at debug information :)
 	pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
 	digitalWrite(BUILTIN_LED, LOW);
 	delay(2000);
@@ -74,9 +79,12 @@ void setup()
 
 	digitalWrite(BUILTIN_LED, HIGH);
 
+	gLedCounter = 0;
+	gLedState = STATE_LED_WAITING;
+
 	// Setup and initiate internal timer
 	os_timer_setfn(&ledTimer, ledTimerCallback, NULL);
-	os_timer_arm(&ledTimer, 500, true);
+	os_timer_arm(&ledTimer, 125, true);
 }
 
 /**
@@ -204,6 +212,8 @@ void parseCommand()
 
 	// Reset command available flag
 	setCommandAvailable(false);
+	gLedState = STATE_LED_COMMAND;
+	gLedCounter = 0;
 
 #ifdef __DEBUG
 	Serial.print( millis() );
@@ -240,6 +250,10 @@ void parseCommand()
 		case CMD_PATTERN:
 			Serial.println(F("PATTERN"));
 			controller.rotatePattern(cmd.getRepeat(),cmd.getDuration(), cmd.getPattern(), cmd.getDirection(), cmd.getOnColor(), cmd.getOffColor(), cmd.getOnTime(), cmd.getOffTime());
+			break;
+		case CMD_WIPE:
+			Serial.println(F("WIPE"));
+			controller.wipe(cmd.getRepeat(),cmd.getDuration(), cmd.getDirection(), cmd.getOnColor(), cmd.getOffColor(), cmd.getOnTime(), cmd.getOffTime(), cmd.getClearAfter(), cmd.getClearEnd());
 			break;
 		case CMD_SCROLL:
 			Serial.println(F("SCROLL"));
@@ -383,6 +397,8 @@ void parseCommand()
 
 	} // end if cmd parse = true
 
+	gLedState = STATE_LED_WAITING;
+
 	Serial.print( millis() );
 	Serial.print(F(" - Command Complete"));
 
@@ -444,13 +460,51 @@ void pubsubCallback(char* topic, byte* payload, unsigned int length)
 }
 
 /**
- * Software timer callback - simply toggles the LED
+ * Software timer callback - toggles the LED
+ *
+ * Note: overly complicated but pleasing on the eyes ;)
  *
  */
 void ledTimerCallback(void *pArg)
 {
-	// Toggle built-in LED
-	digitalWrite(BUILTIN_LED, !digitalRead( BUILTIN_LED ) );
+	gLedCounter += 1;
+
+	switch( gLedState )
+	{
+	case STATE_LED_WAITING:
+		switch( gLedCounter )
+		{
+		case 2:
+			digitalWrite(BUILTIN_LED, 0 );
+			break;
+		case 3:
+			digitalWrite(BUILTIN_LED, 1 );
+			break;
+		case 5:
+			digitalWrite(BUILTIN_LED, 0 );
+			break;
+		case 6:
+			digitalWrite(BUILTIN_LED, 1);
+			break;
+		case 12:
+			gLedCounter = 0;
+			break;
+		default:
+			break;
+		}
+		break;
+	case STATE_LED_COMMAND:
+		if( gLedCounter == 4 )
+		{
+			digitalWrite(BUILTIN_LED, !digitalRead( BUILTIN_LED ) );
+			gLedCounter = 0;
+		}
+		break;
+	case STATE_LED_ERROR:
+		break;
+	default:
+		break;
+	}
 
 } // End of timerCallback
 

@@ -30,6 +30,8 @@ void Helper::dumpBuffer(uint8_t *buf, uint8_t len)
  */
 void Helper::error(uint8_t errorCode)
 {
+	gLedState = STATE_LED_ERROR;
+
 	pinMode(13, OUTPUT);
 	while(1)
 	{
