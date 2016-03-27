@@ -8,13 +8,7 @@
 #define _WifiNeoPixelClient_H_
 #include <Arduino.h>
 
-//#include <ESP8266WiFi.h>
-//#include <PubSubClient.h>
-
 #include "Command.h"
-//#include "NeoPixelWrapper.h"
-//#include "PubSubWrapper.h"
-//#include "WifiWrapper.h"
 #include "Configuration.h"
 #include "Helper.h"
 #include "Menu.h"

@@ -197,13 +197,18 @@ boolean initialize()
 } // end initialize
 
 /**
- * calls others functions while we are not busy
+ * calls others functions while we are not busy.
+ * This is required since we disabled interrupts
+ * to use the FastLED library.
+ *
+ * TODO: re-enable interrupts and see what happens
  *
  */
 void worker()
 {
 	pubsubw.work();
 	yield();
+	ESP.wdtFeed();
 }
 
 
@@ -370,9 +375,10 @@ void parseCommand()
 					Serial.println( destNode );
 
 					// Shift relay nodes left 1, removing destination from list
+					// (we don't want to relay back to ourselves)
 					cmd.shiftRelayNodes();
 
-					// Build comment to relay to next node
+					// Build "new" command to relay to next node
 					if( cmd.buildCommand( pubsubw.getBuffer() ) )
 					{
 						// Build channel to send it to

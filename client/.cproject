@@ -77,4 +77,5 @@
 			<resource resourceType="PROJECT" workspacePath="/WifiNeoPixelClient"/>
 		</configuration>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 </cproject>
