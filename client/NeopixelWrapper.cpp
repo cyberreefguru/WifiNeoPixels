@@ -193,8 +193,6 @@ void NeopixelWrapper::wipe(uint16_t repeat, uint32_t duration, uint8_t direction
 	uint16_t count = 0;
 	uint32_t endTime = millis() + duration;
 
-	int16_t curIndex;
-
 	resetIntensity();
 
 	// clear LEDs
@@ -838,7 +836,7 @@ void NeopixelWrapper::lightning(uint16_t repeat, uint32_t duration, CRGB onColor
 	uint16_t count = 0;
 	uint32_t endTime = millis() + duration;;
 
-	uint32_t lc, large;
+	uint32_t large;
 	uint8_t i, b;
 
 	b = false;
@@ -846,7 +844,6 @@ void NeopixelWrapper::lightning(uint16_t repeat, uint32_t duration, CRGB onColor
 
     while(isCommandAvailable() == false )
 	{
-		lc = random(2, 6);
 		for(i=0; i<count; i++)
 		{
 			large = random(0,100);

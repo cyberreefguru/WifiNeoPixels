@@ -1,5 +1,6 @@
 /*
- *  Simple HTTP get webclient test
+ *  Client for controlling LEDs with Node MCU
+ *
  */
 
 //#define __DEBUG
@@ -30,7 +31,7 @@ void ledTimerCallback(void *pArg);
 
 
 /**
- * Arduino setup function
+ * Setup function
  *
  */
 void setup()
@@ -54,6 +55,7 @@ void setup()
 	delay(2000);
 	yield();
 
+	// Initialize the configuration object; configs stored in Flash
 	Serial.println("\nInitializing configuration...");
     if( config.initialize() )
     {
@@ -77,8 +79,10 @@ void setup()
 
     Serial.println(F("** Initialization Complete **"));
 
+    // Turn off LED
 	digitalWrite(BUILTIN_LED, HIGH);
 
+	// Set LED variables
 	gLedCounter = 0;
 	gLedState = STATE_LED_WAITING;
 
@@ -88,13 +92,14 @@ void setup()
 }
 
 /**
- * Arduino loop function
+ * Loop function
  *
  */
 void loop()
 {
 	uint8_t configFlag = 0;
 
+	// calls yield and other must run code
 	worker();
 
 	// Check if command is available
