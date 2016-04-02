@@ -60,8 +60,7 @@ public:
 
 	void setFramesPerSecond(uint8_t fps);
 	uint8_t getFramesPerSecond();
-	void setHueUpdateTime(uint8_t updateTime);
-	uint8_t getHueUpdateTime();
+
 	void setIntensity(uint8_t i);
 	uint8_t getIntensity();
 
@@ -85,21 +84,15 @@ public:
     void stack(uint16_t repeat, uint32_t duration, uint8_t direction, CRGB onColor, CRGB offColor, uint32_t onTime, uint8_t clearEnd);
     void fillRandom(uint16_t repeat, uint32_t duration, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime, uint8_t clearAfter, uint8_t clearEnd);
 
-    void rainbow(uint32_t duration, uint8_t glitterProbability, CRGB glitterColor, uint8_t fps);
-    void rainbowFade(uint32_t duration, uint8_t fps);
-	void confetti(uint32_t duration, CRGB color, uint8_t fadeBy, uint8_t fps);
-	void cylon(uint16_t repeat, uint32_t duration, CRGB color, uint32_t fadeTime, uint8_t fps);
-	void bpm(uint32_t duration, uint8_t fps);
-	void juggle(uint32_t duration, uint8_t fps);
+    void rainbow(uint32_t duration, uint8_t glitterProbability, CRGB glitterColor, uint32_t onTime, uint8_t hueUpdateTime);
+    void rainbowFade(uint32_t duration, uint32_t onTime);
+	void confetti(uint32_t duration, CRGB color, uint8_t fadeBy, uint32_t onTime, uint8_t hueUpdateTime);
+	void cylon(uint16_t repeat, uint32_t duration, CRGB color, uint32_t fadeTime, uint8_t fps, uint8_t hueUpdateTime);
+	void bpm(uint32_t duration, uint32_t onTime, uint8_t hueUpdateTime);
+	void juggle(uint32_t duration, uint32_t onTime );
 
 protected:
 	CRGB *leds;
-	uint8_t gHue; // rotating "base color" used by many of the patterns
-//	uint8_t sparkleCount;
-//	uint8_t frameWaitTime;
-	uint8_t gHueUpdateTime;
-//	uint8_t maxIntensity;
-//	uint8_t maxFps;
 
 	void setPixel(int16_t index, CRGB color);
 	void setPatternTimed(int16_t index, uint8_t pattern, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime, uint8_t clearAfter);

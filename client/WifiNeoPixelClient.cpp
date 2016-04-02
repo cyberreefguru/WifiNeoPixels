@@ -206,9 +206,9 @@ boolean initialize()
  */
 void worker()
 {
-	pubsubw.work();
-	yield();
-	ESP.wdtFeed();
+	pubsubw.work(); // process queue
+	yield(); // give time to ESP
+	ESP.wdtFeed(); // pump watch dog
 }
 
 
@@ -303,31 +303,27 @@ void parseCommand()
 			break;
 		case CMD_RAINBOW:
 			Serial.println(F("RAINBOW"));
-			controller.rainbow(cmd.getDuration(), cmd.getProbability(), cmd.getOnColor(), cmd.getFramesPerSecond());
+			controller.rainbow(cmd.getDuration(), cmd.getProbability(), cmd.getOnColor(), cmd.getOnTime(), cmd.getHueUpdateTime());
 			break;
 		case CMD_RAINBOW_FADE:
 			Serial.println(F("RAINBOW_FADE"));
-			controller.rainbowFade(cmd.getDuration(), cmd.getFramesPerSecond());
+			controller.rainbowFade(cmd.getDuration(), cmd.getOnTime());
 			break;
 		case CMD_CONFETTI:
 			Serial.println(F("CONFETTI"));
-			controller.confetti(cmd.getDuration(), cmd.getOnColor(), cmd.getFadeBy(), cmd.getFramesPerSecond());
+			controller.confetti(cmd.getDuration(), cmd.getOnColor(), cmd.getFadeBy(), cmd.getOnTime(), cmd.getHueUpdateTime() );
 			break;
 		case CMD_CYLON:
 			Serial.println(F("CYLON"));
-			controller.cylon(cmd.getRepeat(), cmd.getDuration(), cmd.getOnColor(), cmd.getFadeTime(), cmd.getFramesPerSecond());
+			controller.cylon(cmd.getRepeat(), cmd.getDuration(), cmd.getOnColor(), cmd.getFadeTime(), cmd.getFramesPerSecond(), cmd.getHueUpdateTime());
 			break;
 		case CMD_BPM:
 			Serial.println(F("BPM"));
-			controller.bpm(cmd.getDuration(), cmd.getFramesPerSecond());
+			controller.bpm(cmd.getDuration(), cmd.getOnTime(), cmd.getHueUpdateTime() );
 			break;
 		case CMD_JUGGLE:
 			Serial.println(F("JUGGLE"));
-			controller.juggle(cmd.getDuration(), cmd.getFramesPerSecond());
-			break;
-		case CMD_SET_HUE_UPDATE_TIME:
-			Serial.println(F("SET_HUE_UPDATE_TIME"));
-			controller.setHueUpdateTime( cmd.getUpdateTime() );
+			controller.juggle(cmd.getDuration(), cmd.getOnTime());
 			break;
 		case CMD_SET_INTENSITY:
 			Serial.println(F("SET_INTENSITY"));

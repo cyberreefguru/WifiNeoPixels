@@ -77,8 +77,6 @@
 #define CMD_JUGGLE              0x25
 
 // Administrative Functions
-//#define CMD_SET_FPS             0x30
-#define CMD_SET_HUE_UPDATE_TIME 0x31
 #define CMD_SET_INTENSITY		0x32
 
 
@@ -173,8 +171,8 @@ public:
 	uint8_t getFramesPerSecond() const;
 	void setFramesPerSecond(uint8_t framesPerSecond);
 
-	uint8_t getUpdateTime() const;
-	void setUpdateTime(uint8_t updateTime);
+	uint8_t getHueUpdateTime() const;
+	void setHueUpdateTime(uint8_t updateTime);
 
 private:
 	uint8_t command;
@@ -189,7 +187,7 @@ private:
 	uint8_t show;
 
 	uint8_t framesPerSecond;
-	uint8_t updateTime;
+	uint8_t hueUpdateTime;
 	uint8_t intensity;
 
 	uint8_t index;

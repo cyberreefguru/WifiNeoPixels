@@ -19,8 +19,6 @@ void resetIntensity();
 NeopixelWrapper::NeopixelWrapper()
 {
 	leds = 0;
-	gHue = 0;
-	gHueUpdateTime = 20;
 }
 
 
@@ -108,24 +106,6 @@ void NeopixelWrapper::setPixel(int16_t index, CRGB color, uint8_t show)
 void NeopixelWrapper::show()
 {
 	FastLED.show();
-}
-
-
-/**
- * Returns the hue update time
- */
-uint8_t NeopixelWrapper::getHueUpdateTime()
-{
-	return gHueUpdateTime;
-}
-
-/**
- * Changes the amount of time to wait before updating the hue
- *
- */
-void NeopixelWrapper::setHueUpdateTime(uint8_t updateTime)
-{
-	gHueUpdateTime = updateTime;
 }
 
 /**
@@ -887,19 +867,19 @@ void NeopixelWrapper::lightning(uint16_t repeat, uint32_t duration, CRGB onColor
  *
  * @glitter if true, randomly pops white into rainbow pattern
  */
-void NeopixelWrapper::rainbow(uint32_t duration, uint8_t glitterProbability, CRGB glitterColor, uint8_t fps)
+void NeopixelWrapper::rainbow(uint32_t duration, uint8_t glitterProbability, CRGB glitterColor, uint32_t onTime, uint8_t hueUpdateTime)
 {
-	uint32_t endTime = millis() + duration;;
+	uint8_t hue = 0;
+	uint32_t hueTime = 0;
+	uint32_t endTime = millis() + duration;
 
-	//TODO: Figure out to better control timing with FPS or hue update time
-
-	uint8_t frameTime = 1000/fps;
 	resetIntensity();
+	fill(BLACK, true);
 
     while(isCommandAvailable() == false )
     {
         // FastLED's built-in rainbow generator
-        fill_rainbow(leds, FastLED.size(), gHue, 7);
+        fill_rainbow(leds, FastLED.size(), hue, 7);
         if (glitterProbability > 0)
         {
             if (random8() < glitterProbability)
@@ -909,14 +889,13 @@ void NeopixelWrapper::rainbow(uint32_t duration, uint8_t glitterProbability, CRG
 
         }
         FastLED.show();
-        commandDelay( frameTime );
-
-        // do some periodic updates
-        // TODO: EVERY_N_MILLISECONDS does not appear to work on the ESP8266
-        EVERY_N_MILLISECONDS(gHueUpdateTime)
+        commandDelay( onTime );
+        hueTime +=1;
+        if( hueTime == hueUpdateTime )
         {
-            gHue++;
-        } // slowly cycle the "base color" through the rainbow
+        	hueTime = 0;
+        	hue += 1;
+        }
 
 		if( duration > 0 && millis() > endTime )
 		{
@@ -932,14 +911,14 @@ void NeopixelWrapper::rainbow(uint32_t duration, uint8_t glitterProbability, CRG
  * https://gist.github.com/kriegsman/964de772d64c502760e5
  *
  */
-void NeopixelWrapper::rainbowFade(uint32_t duration, uint8_t fps)
+void NeopixelWrapper::rainbowFade(uint32_t duration, uint32_t onTime)
 {
 	uint32_t endTime = millis() + duration;;
 
 	//TODO: Figure out to better control timing with FPS or hue update time
 
-	uint8_t frameTime = 1000/fps;
 	resetIntensity();
+	fill(BLACK, true);
 
     while(isCommandAvailable() == false )
     {
@@ -984,7 +963,7 @@ void NeopixelWrapper::rainbowFade(uint32_t duration, uint8_t fps)
         }
 
         FastLED.show();
-        commandDelay( frameTime );
+        commandDelay( onTime );
 
 		if( duration > 0 && millis() > endTime )
 		{
@@ -1005,14 +984,14 @@ void NeopixelWrapper::rainbowFade(uint32_t duration, uint8_t fps)
  * NOTE: runTime has no effect at this time
  *
  */
-void NeopixelWrapper::confetti(uint32_t duration, CRGB color, uint8_t fadeBy, uint8_t fps)
+void NeopixelWrapper::confetti(uint32_t duration, CRGB color, uint8_t fadeBy, uint32_t onTime, uint8_t hueUpdateTime)
 {
+	uint8_t hue = 0;
+	uint32_t hueTime = 0;
 	uint32_t endTime = millis() + duration;;
 
-	//TODO: Figure out to better control timing with FPS or hue update time
-
-	uint8_t frameTime = 1000/fps;
-	resetIntensity();
+	resetIntensity(); // reset intensity to full
+	fill(BLACK, true); // clear any previous colors
 
 	while(isCommandAvailable() == false )
     {
@@ -1021,20 +1000,21 @@ void NeopixelWrapper::confetti(uint32_t duration, CRGB color, uint8_t fadeBy, ui
         int pos = random16(FastLED.size());
         if (color == (CRGB)RAINBOW)
         {
-            leds[pos] += CHSV(gHue + random8(64), 200, 255);
+            leds[pos] += CHSV(hue + random8(64), 200, 255);
             // do some periodic updates
-            EVERY_N_MILLISECONDS(gHueUpdateTime)
+            if( hueTime == hueUpdateTime )
             {
-                gHue++;
-            } // cycle the "base color" through the rainbow
-
+            	hueTime = 0;
+            	hue += 1;
+            }
         }
         else
         {
             leds[pos] += color;
         }
         FastLED.show();
-        commandDelay( frameTime );
+        commandDelay( onTime );
+        hueTime += 1;
 
 		if( duration > 0 && millis() > endTime )
 		{
@@ -1050,15 +1030,16 @@ void NeopixelWrapper::confetti(uint32_t duration, CRGB color, uint8_t fadeBy, ui
  * Creates "cylon" pattern - bright led followed up dimming LEDs back and forth
  *
  */
-void NeopixelWrapper::cylon(uint16_t repeat, uint32_t duration, CRGB color, uint32_t fadeTime, uint8_t fps)
+void NeopixelWrapper::cylon(uint16_t repeat, uint32_t duration, CRGB color, uint32_t fadeTime, uint8_t fps, uint8_t hueUpdateTime)
 {
+	uint8_t hue = 0;
+	uint32_t hueTime = 0;
 	uint16_t count = 0;
 	uint32_t endTime = millis() + duration;;
 	uint8_t flag = false; // flag to increment counter
 
-	//TODO: Figure out to better control timing with FPS or hue update time
-
 	resetIntensity();
+	fill( BLACK, true);
 
     while(isCommandAvailable() == false )
     {
@@ -1066,12 +1047,11 @@ void NeopixelWrapper::cylon(uint16_t repeat, uint32_t duration, CRGB color, uint
         int pos = beatsin16(fps, 0, FastLED.size());
         if (color == (CRGB)RAINBOW)
         {
-            leds[pos] += CHSV(gHue, 255, 192);
-            // do some periodic updates
-            EVERY_N_MILLISECONDS(gHueUpdateTime)
+            leds[pos] += CHSV(hue, 255, 192);
+            if( hueTime == hueUpdateTime)
             {
-                // slowly cycle the "base color" through the rainbow
-                gHue++;
+            	hueTime = 0;
+            	hue +=1;
             }
         }
         else
@@ -1081,6 +1061,7 @@ void NeopixelWrapper::cylon(uint16_t repeat, uint32_t duration, CRGB color, uint
 
         FastLED.show();
         commandDelay( fadeTime );
+        hueTime += 1;
 
         if( pos == 0 && flag == false)
         {
@@ -1108,13 +1089,14 @@ void NeopixelWrapper::cylon(uint16_t repeat, uint32_t duration, CRGB color, uint
  * No clue how to explain this one...
  *
  */
-void NeopixelWrapper::bpm(uint32_t duration, uint8_t fps)
+void NeopixelWrapper::bpm(uint32_t duration, uint32_t onTime, uint8_t hueUpdateTime)
 {
+	uint8_t hue = 0;
+	uint32_t hueTime = 0;
 	uint32_t endTime = millis() + duration;;
 
-	//TODO: Figure out to better control timing with FPS or hue update time
-	uint8_t frameTime = 1000/fps;
 	resetIntensity();
+	fill( BLACK, true);
 
 	while(isCommandAvailable() == false )
     {
@@ -1124,16 +1106,17 @@ void NeopixelWrapper::bpm(uint32_t duration, uint8_t fps)
         uint8_t beat = beatsin8(BeatsPerMinute, 64, 255);
         for (int i = 0; i < FastLED.size(); i++)
         { //9948
-            leds[i] = ColorFromPalette(palette, gHue + (i * 2), beat - gHue + (i * 10));
+            leds[i] = ColorFromPalette(palette, hue + (i * 2), beat - hue + (i * 10));
         }
-        // do some periodic updates
-        EVERY_N_MILLISECONDS(gHueUpdateTime)
+        if( hueTime == hueUpdateTime )
         {
-            gHue++;
-        } // slowly cycle the "base color" through the rainbow
+        	hueTime = 0;
+        	hue +=1;
+        }
 
         FastLED.show();
-        commandDelay( frameTime );
+        commandDelay( onTime );
+        hueTime += 1;
 
 		if( duration > 0 && millis() > endTime )
 		{
@@ -1148,13 +1131,14 @@ void NeopixelWrapper::bpm(uint32_t duration, uint8_t fps)
  * No clue how to explain this one
  *
  */
-void NeopixelWrapper::juggle(uint32_t duration, uint8_t fps)
+void NeopixelWrapper::juggle(uint32_t duration, uint32_t onTime)
 {
 	uint32_t endTime = millis() + duration;;
 
-	//TODO: Figure out to better control timing with FPS or hue update time
-	uint8_t frameTime = 1000/fps;
+	//TODO: Figure out to better control hue update time
+
 	resetIntensity();
+	fill(BLACK, true);
 
 	while(isCommandAvailable() == false )
     {
@@ -1168,7 +1152,7 @@ void NeopixelWrapper::juggle(uint32_t duration, uint8_t fps)
         }
 
         FastLED.show();
-        commandDelay( frameTime );
+        commandDelay( onTime );
 
 		if( duration > 0 && millis() > endTime )
 		{

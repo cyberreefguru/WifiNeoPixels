@@ -29,7 +29,7 @@ void Command::initialize()
 	notifyOnComplete = false;
 	relay = false;
 	framesPerSecond = DEFAULT_FPS;
-	updateTime = 0;
+	hueUpdateTime = 0;
 	intensity = DEFAULT_INTENSITY;
 	pattern = 0;
 	repeat = 0;
@@ -92,7 +92,7 @@ uint8_t Command::parse(uint8_t* b)
 		show = obj[KEY_SHOW].as<uint8_t>();
 
 		framesPerSecond = obj[KEY_FPS].as<uint8_t>();
-		updateTime = obj[KEY_UPDATE_TIME].as<uint8_t>();
+		hueUpdateTime = obj[KEY_UPDATE_TIME].as<uint8_t>();
 		intensity = obj[KEY_INTENSITY].as<uint8_t>();
 
 		index = obj[KEY_INDEX].as<uint8_t>();
@@ -155,7 +155,7 @@ uint8_t Command::buildCommand(uint8_t *buffer)
 	}
 	root[KEY_SHOW] = show;
 	root[KEY_FPS] = framesPerSecond;
-	root[KEY_UPDATE_TIME] = updateTime;
+	root[KEY_UPDATE_TIME] = hueUpdateTime;
 	root[KEY_INTENSITY] = intensity;
 	root[KEY_INDEX] = index;
 	root[KEY_PATTERN] = pattern;
@@ -258,7 +258,7 @@ void Command::dump()
 	Serial.print(", fps: ");
 	Serial.print( framesPerSecond );
 	Serial.print(", updateTime:");
-	Serial.print( updateTime );
+	Serial.print( hueUpdateTime );
 	Serial.print(", intensity:");
 	Serial.print( intensity );
 	Serial.print(", index: ");
@@ -533,14 +533,14 @@ void Command::setRepeat(uint16_t repeat)
 	this->repeat = repeat;
 }
 
-uint8_t Command::getUpdateTime() const
+uint8_t Command::getHueUpdateTime() const
 {
-	return updateTime;
+	return hueUpdateTime;
 }
 
-void Command::setUpdateTime(uint8_t updateTime)
+void Command::setHueUpdateTime(uint8_t updateTime)
 {
-	this->updateTime = updateTime;
+	this->hueUpdateTime = updateTime;
 }
 
 uint8_t Command::getNotifyOnComplete() const
