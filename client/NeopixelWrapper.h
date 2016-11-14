@@ -11,24 +11,7 @@
 #include <Arduino.h>
 #include <FastLed.h>
 
-// What HW platform are we dealing with?
-#ifdef __ESP8266
-#define DEFAULT_LED_PIN 	D8
-#endif
-#ifdef __ARDUINO
-#define DEFAULT_LED_PIN		3
-#endif
-
-// What LED string are we dealing with
-#ifdef __LED_STRING
-#define DEFAULT_CONTROLLER	WS2812
-#endif
-
-#ifdef __LED_STRIP
-#define DEFAULT_CONTROLLER	NEOPIXEL
-#endif
-
-
+#include "ClientGlobal.h"
 
 #define WHITE	CRGB::White
 #define BLACK	CRGB::Black

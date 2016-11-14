@@ -12,6 +12,9 @@
 #include <EEPROM.h>
 #include <string.h>
 
+#include "ClientGlobal.h"
+
+
 //#include "WifiWrapper.h"
 //#include "PubSubWrapper.h"
 //#include "NeoPixelWrapper.h"

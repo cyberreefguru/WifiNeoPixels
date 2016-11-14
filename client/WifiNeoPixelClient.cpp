@@ -3,10 +3,7 @@
  *
  */
 
-//#define __DEBUG
-
 #include "WifiNeoPixelClient.h"
-#include <user_interface.h>
 
 // Internal Variables
 static Configuration config;
@@ -44,14 +41,14 @@ void setup()
 
 	// This pauses the start process so the user can do things like
 	// attach to the serial port and look at debug information :)
-	pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
-	digitalWrite(BUILTIN_LED, LOW);
+	pinMode(BUILT_IN_LED, OUTPUT);     // Initialize the  pin as an output
+	digitalWrite(BUILT_IN_LED, LOW);
 	delay(2000);
 	yield();
-	digitalWrite(BUILTIN_LED, HIGH);
+	digitalWrite(BUILT_IN_LED, HIGH);
 	delay(2000);
 	yield();
-	digitalWrite(BUILTIN_LED, LOW);
+	digitalWrite(BUILT_IN_LED, LOW);
 	delay(2000);
 	yield();
 
@@ -64,10 +61,11 @@ void setup()
     else
     {
     	Serial.println("\n**ERROR - failed to initialize configuration");
-    	Helper::error(ERROR_CONFIG);
+    	Helper::error(ERROR_CONFIG); // never returns from here
     }
 
     // Initialize menu
+	Serial.println("\nInitializing menu...");
 	menu.initialize(&config);
 
 	// Initialize wifi, pubsub, and LEDs
@@ -80,7 +78,7 @@ void setup()
     Serial.println(F("** Initialization Complete **"));
 
     // Turn off LED
-	digitalWrite(BUILTIN_LED, HIGH);
+	digitalWrite(BUILT_IN_LED, HIGH);
 
 	// Set LED variables
 	gLedCounter = 0;
@@ -109,11 +107,16 @@ void loop()
 	}
 
 	// check if we are connected to mqtt server
-	// TODO: this pattern was from the sample code and I'm not sure it is necessary
 	if( !pubsubw.checkConnection() )
 	{
-		menu.waitForConfig();
-		configFlag = 1;
+		// If we lost the connection to the queue toggle the LED as a warning to the user
+		// We can't do anything other than try to connect or have the user reconfigure
+		gLedState = STATE_LED_ERROR;
+		Helper::toggleLed(ERROR_QUEUE_TIME);
+	}
+	else
+	{
+		gLedState = STATE_LED_WAITING;
 	}
 
 	// Check if user wants to configure node
@@ -136,13 +139,20 @@ void loop()
  */
 void configure()
 {
-	menu.configure();
+	if( menu.configure() == 1 )
+	{
+		// NOTE: I could not get the device reboot reliably, so cycle the power
+		//       is the best option.  Even "reset" and "restart" don't work reliably.
 
-	// NOTE: I could not get the device configured reliably, so cycle the power
-	//       is the best option.  Even "reset" and "restart" don't work reliably.
+		Serial.println(F("\nUser Configuration Complete - please cycle power."));
+		gLedState = STATE_LED_ERROR;
+		Helper::error(ERROR_GENERAL);
+	}
+	else
+	{
+		Serial.println("Configuration aborted!");
+	}
 
-	Serial.println(F("\nUser Configuration Complete - please cycle power."));
-	Helper::error(ERROR_GENERAL);
 }
 
 
@@ -154,14 +164,18 @@ boolean initialize()
 {
 	boolean configured = false;
 
-	Serial.println(F("Configuring node..."));
+	Serial.println(F("Configuring wifi..."));
 
 	// Initialize WIFI
 	if( wifiw.initialize(&config) )
 	{
+		Serial.println(F("Configuring queue..."));
+
 		// Initialize pubsub
 		if( pubsubw.initialize(&config, &wifiw) )
 		{
+			Serial.println(F("Configuring leds..."));
+
 			// Initialize the LEDs
 			if ( controller.initialize(config.getNumberLeds(), DEFAULT_INTENSITY) )
 			{
@@ -482,16 +496,16 @@ void ledTimerCallback(void *pArg)
 		switch( gLedCounter )
 		{
 		case 2:
-			digitalWrite(BUILTIN_LED, 0 );
+			digitalWrite(BUILT_IN_LED, 0 );
 			break;
 		case 3:
-			digitalWrite(BUILTIN_LED, 1 );
+			digitalWrite(BUILT_IN_LED, 1 );
 			break;
 		case 5:
-			digitalWrite(BUILTIN_LED, 0 );
+			digitalWrite(BUILT_IN_LED, 0 );
 			break;
 		case 6:
-			digitalWrite(BUILTIN_LED, 1);
+			digitalWrite(BUILT_IN_LED, 1);
 			break;
 		case 12:
 			gLedCounter = 0;
@@ -503,7 +517,7 @@ void ledTimerCallback(void *pArg)
 	case STATE_LED_COMMAND:
 		if( gLedCounter == 4 )
 		{
-			digitalWrite(BUILTIN_LED, !digitalRead( BUILTIN_LED ) );
+			digitalWrite(BUILT_IN_LED, !digitalRead( BUILT_IN_LED ) );
 			gLedCounter = 0;
 		}
 		break;
@@ -514,5 +528,3 @@ void ledTimerCallback(void *pArg)
 	}
 
 } // End of timerCallback
-
-

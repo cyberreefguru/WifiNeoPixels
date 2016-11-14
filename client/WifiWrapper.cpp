@@ -38,14 +38,50 @@ uint8_t WifiWrapper::initialize()
 	Serial.println(F("Initializing WIFI..."));
 
 	Serial.print(F("Connection Status: "));
-	Serial.println( WiFi.status() );
+	if( WiFi.status() == WL_CONNECTED )
+	{
+		Serial.println( "CONNECTED" );
+	}
+	else if( WiFi.status() == WL_DISCONNECTED)
+	{
+		Serial.println( "DISCONNECTED" );
+	}
+	else if( WiFi.status() == WL_CONNECTION_LOST)
+	{
+		Serial.println( "LOST" );
+	}
+	else if( WiFi.status() == WL_CONNECT_FAILED)
+	{
+		Serial.println( "FAILED" );
+	}
+	else if( WiFi.status() == WL_SCAN_COMPLETED)
+	{
+		Serial.println( "SCAN COMPLETE" );
+	}
+	else if( WiFi.status() == WL_NO_SSID_AVAIL)
+	{
+		Serial.println( "NO SSID" );
+	}
+	else if( WiFi.status() == WL_IDLE_STATUS)
+	{
+		Serial.println( "IDLE" );
+	}
+	else if( WiFi.status() == WL_NO_SHIELD)
+	{
+		Serial.println( "NO SHIELD" );
+	}
+
 	delay(500);
 
-//	if( WiFi.status() == WL_CONNECTED )
-//	{
-//		Serial.println(F("Disconnecting current session..."));
-//		WiFi.disconnect(1);
-//	}
+	ESP.wdtDisable();
+	ESP.wdtEnable(WDTO_8S);
+//	ESP.wdtFeed();
+
+	if( WiFi.status() == WL_CONNECTED )
+	{
+		Serial.println(F("Disconnecting current session..."));
+		WiFi.disconnect(1);
+	}
 
 	Serial.print(F("Connecting to "));
 	Serial.print((char *)config->getSsid() );

@@ -6,8 +6,14 @@
 
 #ifndef _WifiNeoPixelClient_H_
 #define _WifiNeoPixelClient_H_
-#include <Arduino.h>
 
+//#define __DEBUG
+//#define __WITTY
+
+#include <Arduino.h>
+#include <user_interface.h>
+
+#include "ClientGlobal.h"
 #include "Command.h"
 #include "Configuration.h"
 #include "Helper.h"

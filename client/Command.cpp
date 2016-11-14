@@ -131,6 +131,7 @@ uint8_t Command::parse(uint8_t* b)
 	}
 
 	return status;
+
 } // end parse
 
 uint8_t Command::buildCommand(uint8_t *buffer)

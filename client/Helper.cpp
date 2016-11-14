@@ -32,19 +32,21 @@ void Helper::error(uint8_t errorCode)
 {
 	gLedState = STATE_LED_ERROR;
 
-	pinMode(13, OUTPUT);
+	// TODO - make error flashing more useful
+
+	pinMode(BUILT_IN_LED, OUTPUT);
 	while(1)
 	{
 		switch( errorCode )
 		{
 		case ERROR_WIRELESS:
-			Helper::toggleLed(300);
+			Helper::toggleLed(ERROR_WIRELESS_TIME);
 			break;
 		case ERROR_DRIVER:
-			Helper::toggleLed(200);
+			Helper::toggleLed(ERROR_DRIVER_TIME);
 			break;
 		case ERROR_GENERAL:
-			Helper::toggleLed(100);
+			Helper::toggleLed(ERROR_GENERAL_TIME);
 			break;
 		}
 	}
@@ -52,9 +54,9 @@ void Helper::error(uint8_t errorCode)
 
 void Helper::toggleLed(uint32_t time)
 {
-	digitalWrite(BUILTIN_LED, LOW);
+	digitalWrite(BUILT_IN_LED, LOW);
 	delay( time );
-	digitalWrite(BUILTIN_LED, HIGH);
+	digitalWrite(BUILT_IN_LED, HIGH);
 	delay( time );
 }
 
@@ -62,7 +64,7 @@ int8_t Helper::readChar(boolean echo)
 {
 	uint8_t flag = false;
 	uint8_t c = 0;
-	int16_t i = 0;
+	//int16_t i = 0;
 
 	// Wait for input
 	while (!flag )
@@ -167,6 +169,14 @@ int16_t Helper::readString(uint8_t *b, uint8_t len)
 				break;
 			case'\r': // cr
 				// do nothing - throw away
+				break;
+			case'\b': // backspace
+				if( i > 0 )
+				{
+					i = i-1;
+					b[i] = 0;
+					//Serial.print("\033[1D");
+				}
 				break;
 			default:
 				b[i++] = c;

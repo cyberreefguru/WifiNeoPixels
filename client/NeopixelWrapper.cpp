@@ -6,7 +6,8 @@
  */
 
 #define FASTLED_ALLOW_INTERRUPTS 0
-//#define __DEBUG
+#define FASTLED_ESP8266_RAW_PIN_ORDER
+//#define FASTLED_ESP8266_NODEMCU_PIN_ORDER
 
 #include "NeopixelWrapper.h"
 
@@ -43,7 +44,8 @@ boolean NeopixelWrapper::initialize(uint8_t numLeds, uint8_t intensity)
 	}
 	else
 	{
-		FastLED.addLeds<WS2812, D8>(leds, numLeds).setCorrection(TypicalLEDStrip);
+//		FastLED.addLeds<WS2812, D8>(leds, numLeds).setCorrection(TypicalLEDStrip); // string
+		FastLED.addLeds<MY_CONTROLLER, MY_LED_PIN>(leds, numLeds).setCorrection(TypicalLEDStrip); // strip
 
 		// set master brightness control
 		FastLED.setBrightness(intensity);

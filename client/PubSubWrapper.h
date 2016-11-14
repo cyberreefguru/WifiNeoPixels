@@ -10,6 +10,7 @@
 #include <Arduino.h>
 #include <PubSubClient.h>
 
+#include "ClientGlobal.h"
 #include "Configuration.h"
 #include "WifiWrapper.h"
 #include "Command.h"

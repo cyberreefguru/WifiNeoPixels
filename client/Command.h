@@ -8,11 +8,10 @@
 #ifndef COMMAND_H_
 #define COMMAND_H_
 
-#define __DEBUG
-
 #include <Arduino.h>
-
 #include <ArduinoJson.h>
+
+#include "ClientGlobal.h"
 #include "NeopixelWrapper.h"
 
 #define CMD_BUFFER_SIZE		512

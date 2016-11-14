@@ -7,12 +7,20 @@
 
 #include "PubSubWrapper.h"
 
+void pause(uint32_t time);
+
+/**
+ * Constructor
+ */
 PubSubWrapper::PubSubWrapper()
 {
 	config = 0;
 	cmdBuf = 0;
 }
 
+/**
+ * Initializes the wrapper
+ */
 uint8_t PubSubWrapper::initialize(Configuration* config, WifiWrapper* wifi)
 {
 	this->config = config;
@@ -138,9 +146,20 @@ uint8_t PubSubWrapper::checkConnection()
 {
 	uint8_t flag = pubsub.connected();
 
+	// TODO - fix this so errors are not dumped so much
+
 	if (!flag)
 	{
+		Serial.println("ERROR - Queue not connected; Attempting to reconnect...");
 		flag = connect();
+		if( flag )
+		{
+			Serial.println("Reconnection successful.");
+		}
+		else
+		{
+			Serial.println("Reconnection failed.");
+		}
 	}
 
 	return flag;
@@ -229,4 +248,20 @@ uint8_t* PubSubWrapper::getBuffer()
 {
 	return cmdBuf;
 }
+
+/**
+ * Delay function with worker
+ */
+void pause(uint32_t time)
+{
+	if( time == 0 ) return;
+
+	for (uint32_t i = 0; i < time; i++)
+	{
+		delay(1);
+		worker();
+	}
+
+}
+
 

@@ -49,19 +49,24 @@ uint8_t Menu::configure()
 	{
 		// Print menu
 		Serial.println(F("\nCOMMAND MODE:"));
-		Serial.println(F("C - Change Node ID"));
-		Serial.println(F("L - Number of LEDs"));
-		Serial.println(F("I - Change Server IP"));
-		Serial.println(F("S - Change SSID"));
-		Serial.println(F("P - Change Password"));
-		Serial.println(F("D - Dump Configuration"));
+		Serial.println(F("1 - Change Node ID"));
+		Serial.println(F("2 - Number of LEDs"));
+		Serial.println(F("3 - Change Server IP"));
+		Serial.println(F("4 - Change SSID"));
+		Serial.println(F("5 - Change Password"));
+		Serial.println(F("6 - All Channel"));
+		Serial.println(F("7 - Registration Channel"));
+		Serial.println(F("8 - Node Channel"));
+		Serial.println(F("9 - Response Channel"));
+
+		Serial.println(F("\nD - Dump Configuration"));
 		Serial.println(F("E - Save to Flash"));
 		Serial.println(F("Q - Quit"));
 
 		c = toupper( Helper::readChar(false) );
 		switch ( c )
 		{
-		case 'C':
+		case '1':
 			Serial.print(F("** Change Node Id **\nCurrent ID: "));
 			Serial.println(config->getNodeId(), HEX);
 			Serial.print(F("\nPlease enter the new node ID (1-255) > "));
@@ -79,7 +84,7 @@ uint8_t Menu::configure()
 				Serial.println(id);
 			}
 			break;
-		case 'L':
+		case '2':
 			Serial.print(F("** Change Number of LEDs**\nCurrent Number: "));
 			Serial.println(config->getNumberLeds());
 			Serial.print(F("\nPlease enter the new number (1-255) > "));
@@ -98,7 +103,7 @@ uint8_t Menu::configure()
 				Serial.println(id);
 			}
 			break;
-		case 'I':
+		case '3':
 			Serial.print(F("** Change Server Address**\nCurrent Address: "));
 			Serial.println((char *) config->getServerAddress());
 			Serial.print(F("\nPlease enter the new server address > "));
@@ -114,7 +119,7 @@ uint8_t Menu::configure()
 				Serial.print(F("\nNo change!"));
 			}
 			break;
-		case 'S':
+		case '4':
 			Serial.print(F("** Change SSID **\nCurrent SSID: "));
 			Serial.println((char *) config->getSsid());
 			Serial.print(F("\nPlease enter the new SSID > "));
@@ -130,7 +135,7 @@ uint8_t Menu::configure()
 				Serial.print(F("\nNo change!"));
 			}
 			break;
-		case 'P':
+		case '5':
 			Serial.print(F("** Change Password **\nCurrent Password: "));
 			Serial.println((char *) config->getPassword());
 			Serial.print(F("\nPlease enter the new password > "));
@@ -146,6 +151,74 @@ uint8_t Menu::configure()
 				Serial.print(F("\nNo change!"));
 			}
 			break;
+
+		case '6':
+			Serial.print(F("** Change All Channel **\nCurrent All Channel: "));
+			Serial.println((char *) config->getAllChannel());
+			Serial.print(F("\nPlease enter the channel > "));
+			if( Helper::readString(b, INPUT_BUFFER_SIZE) > 0 )
+			{
+				memcpy( (char *)config->getAllChannel(), (char *)b, INPUT_BUFFER_SIZE );
+				Serial.print(F("\nAll Channel: "));
+				Serial.println((char *) config->getAllChannel());
+				changed = 1;
+			}
+			else
+			{
+				Serial.print(F("\nNo change!"));
+			}
+			break;
+
+		case '7':
+			Serial.print(F("** Change Registration Channel **\nCurrent Registration Channel: "));
+			Serial.println((char *) config->getRegistrationChannel());
+			Serial.print(F("\nPlease enter the channel > "));
+			if( Helper::readString(b, INPUT_BUFFER_SIZE) > 0 )
+			{
+				memcpy( (char *)config->getRegistrationChannel(), (char *)b, INPUT_BUFFER_SIZE );
+				Serial.print(F("\nRegistration Channel: "));
+				Serial.println((char *) config->getRegistrationChannel());
+				changed = 1;
+			}
+			else
+			{
+				Serial.print(F("\nNo change!"));
+			}
+			break;
+		case '8':
+			Serial.print(F("** Change Node Channel **\nCurrent Node Channel: "));
+			Serial.println((char *) config->getMyChannel());
+			Serial.print(F("\nPlease enter the channel > "));
+			if( Helper::readString(b, INPUT_BUFFER_SIZE) > 0 )
+			{
+				memcpy( (char *)config->getMyChannel(), (char *)b, INPUT_BUFFER_SIZE );
+				Serial.print(F("\nNode Channel: "));
+				Serial.println((char *) config->getMyChannel());
+				changed = 1;
+			}
+			else
+			{
+				Serial.print(F("\nNo change!"));
+			}
+			break;
+
+		case '9':
+			Serial.print(F("** Change Response Channel **\nCurrent Response Channel: "));
+			Serial.println((char *) config->getMyResponseChannel());
+			Serial.print(F("\nPlease enter the channel > "));
+			if( Helper::readString(b, INPUT_BUFFER_SIZE) > 0 )
+			{
+				memcpy( (char *)config->getMyResponseChannel(), (char *)b, INPUT_BUFFER_SIZE );
+				Serial.print(F("\nResponse Channel: "));
+				Serial.println((char *) config->getMyResponseChannel());
+				changed = 1;
+			}
+			else
+			{
+				Serial.print(F("\nNo change!"));
+			}
+			break;
+
 		case 'D':
 			Serial.println(F("\n** WIFI Configuration **"));
 			WiFi.printDiag(Serial);
@@ -185,6 +258,7 @@ uint8_t Menu::configure()
 				else
 				{
 					Serial.println(F("\nExiting without saving."));
+					changed = 0;
 				}
 			}
 			Serial.println(F("\nQuitting command mode."));

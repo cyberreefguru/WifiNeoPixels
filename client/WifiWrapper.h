@@ -11,6 +11,7 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 
+#include "ClientGlobal.h"
 #include "Configuration.h"
 #include "Helper.h"
 

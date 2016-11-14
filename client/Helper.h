@@ -10,16 +10,24 @@
 
 #include "Arduino.h"
 
+#include "ClientGlobal.h"
+
+#define ERROR_QUEUE				0
+#define ERROR_QUEUE_TIME		50
+
 #define ERROR_WIRELESS			1
+#define ERROR_WIRELESS_TIME		200
 #define ERROR_DRIVER			2
+#define ERROR_DRIVER_TIME		100
 #define ERROR_CONFIG			3
+#define ERROR_CONFIG_TIME		50
+
 #define ERROR_GENERAL			20
+#define ERROR_GENERAL_TIME		400
 
 #define STATE_LED_WAITING 	0
 #define	STATE_LED_COMMAND	1
 #define STATE_LED_ERROR		2
-
-
 
 class Helper
 {

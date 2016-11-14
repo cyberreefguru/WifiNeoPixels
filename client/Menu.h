@@ -13,6 +13,7 @@
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 
+#include "ClientGlobal.h"
 #include "Command.h"
 #include "Configuration.h"
 
@@ -24,7 +25,7 @@
 #define STATUS_NOP		0
 #define STATUS_REBOOT	1
 
-#define INPUT_BUFFER_SIZE		20
+#define INPUT_BUFFER_SIZE		STRING_SIZE
 
 
 class Menu
