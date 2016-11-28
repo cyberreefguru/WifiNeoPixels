@@ -29,7 +29,9 @@ uint8_t PubSubWrapper::initialize(Configuration* config, WifiWrapper* wifi)
 	// Check if we are connected - if so, disconnect
 	if( pubsub.connected() )
 	{
+		Serial.println("Connected already!\nDisconnecting from queue...");
 		disconnect();
+		Helper::workYield(); // Give time to ESP
 	}
 
 	// Set up mqtt server
@@ -49,6 +51,7 @@ uint8_t PubSubWrapper::initialize(Configuration* config, WifiWrapper* wifi)
 		Serial.println(F("ERROR - unable to allocate json buffer memory!"));
 		return false;
 	}
+	Helper::workYield(); // Give time to ESP
 
 	return connect();
 }
@@ -68,7 +71,7 @@ uint8_t PubSubWrapper::connect()
 	}
 	else
 	{
-		Serial.print(F("Attempting queue connection..."));
+		Serial.print(F("Attempting new queue connection..."));
 
 		// Loop until we're reconnected or "timeout"
 		while( count < config->getMqttTries() )
@@ -76,7 +79,8 @@ uint8_t PubSubWrapper::connect()
 			// Attempt to connect
 			if (pubsub.connect((char *)config->getMyChannel()))
 			{
-				Serial.println(F("connected!"));
+				Helper::workYield(); // Give time to ESP
+				Serial.println(F("SUCCESS!"));
 
 				// subscribe to channels
 				pubsub.subscribe( (char *)config->getAllChannel() );
@@ -95,8 +99,9 @@ uint8_t PubSubWrapper::connect()
 			else
 			{
 				Serial.print(F("."));
+
 				// Wait 500 ms before retrying
-				delay(500);
+				Helper::delayYield(500);
 			}
 			count += 1;
 
@@ -146,20 +151,18 @@ uint8_t PubSubWrapper::checkConnection()
 {
 	uint8_t flag = pubsub.connected();
 
-	// TODO - fix this so errors are not dumped so much
-
 	if (!flag)
 	{
-		Serial.println("ERROR - Queue not connected; Attempting to reconnect...");
+//		Serial.println("ERROR - Queue not connected; Attempting to reconnect...");
 		flag = connect();
-		if( flag )
-		{
-			Serial.println("Reconnection successful.");
-		}
-		else
-		{
-			Serial.println("Reconnection failed.");
-		}
+//		if( flag )
+//		{
+//			Serial.println("Reconnection successful.");
+//		}
+//		else
+//		{
+//			Serial.println("Reconnection failed.");
+//		}
 	}
 
 	return flag;
@@ -200,6 +203,8 @@ void PubSubWrapper::callback(char* topic, byte* payload, unsigned int length)
 	{
 		// Copy payload to command buffer
 		memcpy( (void *)cmdBuf, (void *)payload, length);
+		Helper::workYield(); // Give time to ESP
+
 		setCommandAvailable(true);
 	}
 	else
@@ -248,20 +253,3 @@ uint8_t* PubSubWrapper::getBuffer()
 {
 	return cmdBuf;
 }
-
-/**
- * Delay function with worker
- */
-void pause(uint32_t time)
-{
-	if( time == 0 ) return;
-
-	for (uint32_t i = 0; i < time; i++)
-	{
-		delay(1);
-		worker();
-	}
-
-}
-
-

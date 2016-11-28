@@ -12,6 +12,46 @@ Helper::Helper()
 }
 
 /**
+ * yield function abstraction
+ */
+void Helper::workYield()
+{
+	yield(); // give time to ESP
+	ESP.wdtFeed(); // pump watch dog
+}
+
+/**
+ * delay function that yields to esp for processing
+ *
+ * NOTE - do NOT use this before WIFI and queue are properly initialized
+ */
+void Helper::delayYield(uint32_t time)
+{
+	if( time == 0 ) return;
+	for (uint32_t i = 0; i < time; i++)
+	{
+		delay(1);
+		yield(); // give time to ESP
+	}
+	ESP.wdtFeed(); // pump watch dog
+}
+
+/**
+ * delay function that yields to esp for processing
+ *
+ * NOTE - do NOT use this before WIFI and queue are properly initialized
+ */
+void Helper::delayWorker(uint32_t time)
+{
+	if( time == 0 ) return;
+	for (uint32_t i = 0; i < time; i++)
+	{
+		delay(1);
+		worker(); // this calls pubsub.loop, which might crash if queue is not properly initialized
+	}
+}
+
+/**
  * Prints buffer to stdout as hex
  */
 void Helper::dumpBuffer(uint8_t *buf, uint8_t len)
@@ -30,36 +70,72 @@ void Helper::dumpBuffer(uint8_t *buf, uint8_t len)
  */
 void Helper::error(uint8_t errorCode)
 {
-	gLedState = STATE_LED_ERROR;
+	uint8_t i;
+	uint8_t count = errorCode-STATUS_ERROR_BASE; // compute the count from base error
+	setStatus(STATUS_NONE); // turn off interrupt LED flashing
 
-	// TODO - make error flashing more useful
-
-	pinMode(BUILT_IN_LED, OUTPUT);
 	while(1)
 	{
-		switch( errorCode )
+		// Flash LED the number of times based on error code
+		for(i=0; i<count; i++)
 		{
-		case ERROR_WIRELESS:
-			Helper::toggleLed(ERROR_WIRELESS_TIME);
-			break;
-		case ERROR_DRIVER:
-			Helper::toggleLed(ERROR_DRIVER_TIME);
-			break;
-		case ERROR_GENERAL:
-			Helper::toggleLed(ERROR_GENERAL_TIME);
-			break;
+			Helper::toggleLed(100);
 		}
+		Helper::delayYield( 500 );
 	}
 }
 
+/**
+ * Toggles LED on then off
+ */
 void Helper::toggleLed(uint32_t time)
 {
-	digitalWrite(BUILT_IN_LED, LOW);
-	delay( time );
-	digitalWrite(BUILT_IN_LED, HIGH);
-	delay( time );
+	toggleLed();
+//	digitalWrite(BUILT_IN_LED, LOW);
+	Helper::delayYield( time );
+	toggleLed();
+//	digitalWrite(BUILT_IN_LED, HIGH);
+	Helper::delayYield( time );
 }
 
+/**
+ * Toggle state of LED.  If on, turns off.  If off, turns on.
+ *
+ */
+void Helper::toggleLed()
+{
+	digitalWrite(BUILT_IN_LED, !digitalRead( BUILT_IN_LED ) );
+}
+
+/**
+ * Toggles LED on then off
+ */
+void Helper::setLed(uint8_t b)
+{
+	if(b == ON)
+	{
+		digitalWrite(BUILT_IN_LED, LOW);
+	}
+	else if( b == OFF)
+	{
+		digitalWrite(BUILT_IN_LED, HIGH);
+	}
+}
+
+/**
+ * Returns value of LED
+ */
+uint8_t Helper::getLed()
+{
+	return digitalRead( BUILT_IN_LED );
+}
+
+/**
+ * Reads a character from serial port.
+ *
+ * @echo - true writes character back to serial port once read.
+ *
+ */
 int8_t Helper::readChar(boolean echo)
 {
 	uint8_t flag = false;

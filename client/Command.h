@@ -12,6 +12,7 @@
 #include <ArduinoJson.h>
 
 #include "ClientGlobal.h"
+#include "Helper.h"
 #include "NeopixelWrapper.h"
 
 #define CMD_BUFFER_SIZE		512

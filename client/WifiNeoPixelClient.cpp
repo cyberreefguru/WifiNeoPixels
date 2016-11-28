@@ -14,8 +14,9 @@ static Menu menu;
 
 // software timer instance
 os_timer_t ledTimer;
+volatile uint8_t gStatus;
 volatile uint8_t gLedCounter;
-volatile uint8_t gLedState;
+//volatile uint8_t gLedState;
 
 // Indicates we have a command waiting for processing
 static volatile uint8_t commandAvailable = false;
@@ -25,6 +26,7 @@ void configure();
 void parseCommand();
 boolean initialize();
 void ledTimerCallback(void *pArg);
+void startupPause();
 
 
 /**
@@ -35,37 +37,46 @@ void setup()
 {
 	// Configure serial port
 	Serial.begin(115200);
-	Serial.println(F("\n\rLED Controller Powered Up"));
+	Serial.println(F("\n\rLED Controller Powered Up\n"));
 
 	// Basic HW setup
 
 	// This pauses the start process so the user can do things like
 	// attach to the serial port and look at debug information :)
 	pinMode(BUILT_IN_LED, OUTPUT);     // Initialize the  pin as an output
-	digitalWrite(BUILT_IN_LED, LOW);
-	delay(2000);
-	yield();
-	digitalWrite(BUILT_IN_LED, HIGH);
-	delay(2000);
-	yield();
-	digitalWrite(BUILT_IN_LED, LOW);
-	delay(2000);
-	yield();
+
+	// Flash internal LED to show we're alive
+	startupPause();
+
+	// Set LED variables
+	gLedCounter = 0;
+	gStatus = STATUS_BOOTING;
+
+	// Print stastus message
+	Serial.println( F("Configuring timers and watchdog...") );
+
+	// Setup and initiate internal timer
+	os_timer_setfn(&ledTimer, ledTimerCallback, NULL);
+	os_timer_arm(&ledTimer, 125, true);
+
+	// Set watchdog time out to 8 seconds
+	ESP.wdtDisable();
+	ESP.wdtEnable(WDTO_8S);
 
 	// Initialize the configuration object; configs stored in Flash
-	Serial.println("\nInitializing configuration...");
+	Serial.println( F("Initializing configuration...") );
     if( config.initialize() )
     {
-        Serial.println("\nConfiguration initialized.");
+        Serial.println( F("\nConfiguration initialized.") );
     }
     else
     {
-    	Serial.println("\n**ERROR - failed to initialize configuration");
-    	Helper::error(ERROR_CONFIG); // never returns from here
+    	Serial.println( F("\n**ERROR - failed to initialize configuration") );
+    	Helper::error(STATUS_ERROR_CONFIG); // never returns from here
     }
 
     // Initialize menu
-	Serial.println("\nInitializing menu...");
+	Serial.println( F("\nInitializing menu...") );
 	menu.initialize(&config);
 
 	// Initialize wifi, pubsub, and LEDs
@@ -75,18 +86,11 @@ void setup()
 		configure();
 	}
 
+	// Set LED variables
+	setStatus(STATUS_WAITING);
+
     Serial.println(F("** Initialization Complete **"));
 
-    // Turn off LED
-	digitalWrite(BUILT_IN_LED, HIGH);
-
-	// Set LED variables
-	gLedCounter = 0;
-	gLedState = STATE_LED_WAITING;
-
-	// Setup and initiate internal timer
-	os_timer_setfn(&ledTimer, ledTimerCallback, NULL);
-	os_timer_arm(&ledTimer, 125, true);
 }
 
 /**
@@ -111,12 +115,7 @@ void loop()
 	{
 		// If we lost the connection to the queue toggle the LED as a warning to the user
 		// We can't do anything other than try to connect or have the user reconfigure
-		gLedState = STATE_LED_ERROR;
-		Helper::toggleLed(ERROR_QUEUE_TIME);
-	}
-	else
-	{
-		gLedState = STATE_LED_WAITING;
+		Helper::error(STATUS_ERROR_QUEUE);
 	}
 
 	// Check if user wants to configure node
@@ -129,6 +128,7 @@ void loop()
 	if( configFlag == 1)
 	{
 		configFlag = 0;
+		setStatus(STATUS_CONFIGURE);
 		configure();
 	}
 
@@ -143,14 +143,12 @@ void configure()
 	{
 		// NOTE: I could not get the device reboot reliably, so cycle the power
 		//       is the best option.  Even "reset" and "restart" don't work reliably.
-
 		Serial.println(F("\nUser Configuration Complete - please cycle power."));
-		gLedState = STATE_LED_ERROR;
-		Helper::error(ERROR_GENERAL);
+		Helper::error(STATUS_RESET);
 	}
 	else
 	{
-		Serial.println("Configuration aborted!");
+		Serial.println( F("Configuration aborted!") );
 	}
 
 }
@@ -179,13 +177,14 @@ boolean initialize()
 			// Initialize the LEDs
 			if ( controller.initialize(config.getNumberLeds(), DEFAULT_INTENSITY) )
 			{
+				yield(); // give time to ESP
 				Serial.print(F("\nLED Controller initialized..."));
 				controller.fill(CRGB::White, true);
-				delay(250);
+				Helper::delayWorker(250);
 				controller.fill(CRGB::Black, true);
-				delay(250);
+				Helper::delayWorker(250);
 				controller.fill(CRGB::Red, true);
-				delay(250);
+				Helper::delayWorker(250);
 				controller.fill(CRGB::Black, true);
 				Serial.println(F("LED Module Configured."));
 
@@ -194,16 +193,19 @@ boolean initialize()
 			else
 			{
 				Serial.println(F("\nERROR - failed to configure LED module"));
+				setStatus(STATUS_ERROR_DRIVER);
 			}
 		}
 		else
 		{
 			Serial.println(F("\nERROR - failed to configure queue"));
+			setStatus(STATUS_ERROR_QUEUE);
 		}
 	}
 	else
 	{
 		Serial.println(F("\nERROR - failed to configure WIFI"));
+		setStatus(STATUS_ERROR_WIFI);
 	}
 
 	return configured;
@@ -236,8 +238,7 @@ void parseCommand()
 
 	// Reset command available flag
 	setCommandAvailable(false);
-	gLedState = STATE_LED_COMMAND;
-	gLedCounter = 0;
+	setStatus(STATUS_PROCESSING);
 
 #ifdef __DEBUG
 	Serial.print( millis() );
@@ -418,11 +419,10 @@ void parseCommand()
 
 	} // end if cmd parse = true
 
-	gLedState = STATE_LED_WAITING;
-
 	Serial.print( millis() );
-	Serial.print(F(" - Command Complete"));
+	Serial.println(F(" - Command Complete"));
 
+	setStatus(STATUS_WAITING);
 }
 
 /**
@@ -469,6 +469,39 @@ uint8_t commandDelay(uint32_t time)
 }
 
 /**
+ * Flashes LED during startup to tell user we're alive
+ */
+void startupPause()
+{
+	uint8_t i;
+
+	Helper::setLed(OFF);
+
+	for(i=0; i< 20; i++)
+	{
+		Helper::toggleLed();
+		delay(100);
+//		Helper::toggleLed(100);
+	}
+
+//	Helper::setLed(ON);
+////	digitalWrite(BUILT_IN_LED, LOW);
+//	delay(1000);
+//	yield();
+//	Helper::setLed(OFF);
+////	digitalWrite(BUILT_IN_LED, HIGH);
+//	delay(1000);
+//	yield();
+//	Helper::setLed(ON);
+////	digitalWrite(BUILT_IN_LED, LOW);
+//	delay(2000);
+//	yield();
+
+	Helper::setLed(OFF);
+
+}
+
+/**
  * C function that calls class-level callback
  * Admittedly a hack, but it works
  *
@@ -490,41 +523,85 @@ void ledTimerCallback(void *pArg)
 {
 	gLedCounter += 1;
 
-	switch( gLedState )
+	// NOTE - do not use zero for the state select - it will always be at least 1
+	// since we increment the counter above
+
+	switch( gStatus )
 	{
-	case STATE_LED_WAITING:
+	case STATUS_NONE:
+		gLedCounter = 0;
+		break;
+	case STATUS_BOOTING:
 		switch( gLedCounter )
 		{
-		case 2:
-			digitalWrite(BUILT_IN_LED, 0 );
+		case 1:
+			Helper::setLed(ON);
 			break;
 		case 3:
-			digitalWrite(BUILT_IN_LED, 1 );
-			break;
-		case 5:
-			digitalWrite(BUILT_IN_LED, 0 );
-			break;
-		case 6:
-			digitalWrite(BUILT_IN_LED, 1);
-			break;
-		case 12:
+			Helper::setLed(OFF);
 			gLedCounter = 0;
 			break;
 		default:
 			break;
 		}
 		break;
-	case STATE_LED_COMMAND:
+	case STATUS_WAITING:
+
+		// Create heart beat - on 1 cycle, off 2 cycles, on 1 cycle, off 6 cycles
+		switch( gLedCounter )
+		{
+		case 1:
+			Helper::setLed(ON);
+//			digitalWrite(BUILT_IN_LED, 0 );
+			break;
+		case 2:
+			Helper::setLed(OFF);
+//			digitalWrite(BUILT_IN_LED, 1 );
+			break;
+		case 4:
+			Helper::setLed(ON);
+//			digitalWrite(BUILT_IN_LED, 0 );
+			break;
+		case 5:
+			Helper::setLed(OFF);
+//			digitalWrite(BUILT_IN_LED, 1);
+			break;
+		case 11:
+			gLedCounter = 0;
+			break;
+		default:
+			break;
+		}
+		break;
+	case STATUS_PROCESSING:
 		if( gLedCounter == 4 )
 		{
 			digitalWrite(BUILT_IN_LED, !digitalRead( BUILT_IN_LED ) );
 			gLedCounter = 0;
 		}
 		break;
-	case STATE_LED_ERROR:
+
+	case STATUS_ERROR_GENERAL:
+	case STATUS_ERROR_QUEUE:
+	case STATUS_ERROR_WIFI:
+	case STATUS_ERROR_DRIVER:
+	case STATUS_ERROR_CONFIG:
+		Helper::toggleLed();
+		gLedCounter = 0;
 		break;
 	default:
 		break;
 	}
 
 } // End of timerCallback
+
+void setStatus(volatile uint8_t status)
+{
+	gStatus = status;
+	gLedCounter = 0;
+}
+
+volatile uint8_t getStatus()
+{
+	return gStatus;
+}

@@ -26,6 +26,7 @@ uint8_t Menu::initialize(Configuration* config)
 //	this->controller = controller;
 	flag = true;
 
+	Serial.println( F("Menu configured.") );
 	return flag;
 }
 

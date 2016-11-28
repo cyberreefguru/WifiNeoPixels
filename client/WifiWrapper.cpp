@@ -37,58 +37,66 @@ uint8_t WifiWrapper::initialize()
 
 	Serial.println(F("Initializing WIFI..."));
 
+	if( config == NULL )
+	{
+		Serial.println(F("ERROR - configuration object not defined."));
+		return flag;
+	}
+
 	Serial.print(F("Connection Status: "));
 	if( WiFi.status() == WL_CONNECTED )
 	{
-		Serial.println( "CONNECTED" );
+		Serial.println( F("CONNECTED") );
 	}
 	else if( WiFi.status() == WL_DISCONNECTED)
 	{
-		Serial.println( "DISCONNECTED" );
+		Serial.println( F("DISCONNECTED") );
 	}
 	else if( WiFi.status() == WL_CONNECTION_LOST)
 	{
-		Serial.println( "LOST" );
+		Serial.println( F("LOST") );
 	}
 	else if( WiFi.status() == WL_CONNECT_FAILED)
 	{
-		Serial.println( "FAILED" );
+		Serial.println( F("FAILED") );
 	}
 	else if( WiFi.status() == WL_SCAN_COMPLETED)
 	{
-		Serial.println( "SCAN COMPLETE" );
+		Serial.println( F("SCAN COMPLETE") );
 	}
 	else if( WiFi.status() == WL_NO_SSID_AVAIL)
 	{
-		Serial.println( "NO SSID" );
+		Serial.println( F("NO SSID") );
 	}
 	else if( WiFi.status() == WL_IDLE_STATUS)
 	{
-		Serial.println( "IDLE" );
+		Serial.println( F("IDLE") );
 	}
 	else if( WiFi.status() == WL_NO_SHIELD)
 	{
-		Serial.println( "NO SHIELD" );
+		Serial.println( F("NO SHIELD") );
 	}
 
-	delay(500);
+	// Pause to allow WIFI to stabilize
+//	delay(500);
 
-	ESP.wdtDisable();
-	ESP.wdtEnable(WDTO_8S);
-//	ESP.wdtFeed();
-
+	// If connected, reset connection
 	if( WiFi.status() == WL_CONNECTED )
 	{
 		Serial.println(F("Disconnecting current session..."));
 		WiFi.disconnect(1);
+		Helper::workYield(); // Delay and give time to ESP
 	}
 
+	// Connect to specified network
 	Serial.print(F("Connecting to "));
 	Serial.print((char *)config->getSsid() );
 
 	// We start by connecting to a WiFi network
 	WiFi.begin( (char *)config->getSsid(), (char *)config->getPassword());
-	delay(500);
+
+	Helper::delayYield(250); // Give time to ESP
+	//delay(250);
 
 	while( count < config->getWifiTries() )
 	{
@@ -100,8 +108,8 @@ uint8_t WifiWrapper::initialize()
 		else
 		{
 			count += 1;
-			Serial.print(".");
-			delay(500);
+			Serial.print(F("."));
+			Helper::delayYield(500); // Delay and give time to ESP
 		}
 	}
 
@@ -111,7 +119,8 @@ uint8_t WifiWrapper::initialize()
 		Serial.println(WiFi.localIP());
 
 		// pause after configuring WIFI
-		delay(250);
+		Helper::delayYield(250); // Give time to ESP
+		//delay(250);
 	}
 	else
 	{

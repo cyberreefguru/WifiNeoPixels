@@ -12,6 +12,7 @@
 #include <FastLed.h>
 
 #include "ClientGlobal.h"
+#include "Helper.h"
 
 #define WHITE	CRGB::White
 #define BLACK	CRGB::Black

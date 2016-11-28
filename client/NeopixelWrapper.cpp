@@ -45,7 +45,8 @@ boolean NeopixelWrapper::initialize(uint8_t numLeds, uint8_t intensity)
 	else
 	{
 //		FastLED.addLeds<WS2812, D8>(leds, numLeds).setCorrection(TypicalLEDStrip); // string
-		FastLED.addLeds<MY_CONTROLLER, MY_LED_PIN>(leds, numLeds).setCorrection(TypicalLEDStrip); // strip
+		FastLED.addLeds<MY_CONTROLLER, MY_LED_PIN>(leds, numLeds).setCorrection(MY_COLOR_CORRECTION); // strip
+		Helper::workYield();
 
 		// set master brightness control
 		FastLED.setBrightness(intensity);
@@ -141,6 +142,7 @@ void NeopixelWrapper::fill(CRGB color, uint8_t show)
     {
         leds[i] = color;
     }
+	worker();
     if (show)
     {
         FastLED.show();
@@ -322,15 +324,15 @@ void NeopixelWrapper::scrollPattern(uint16_t repeat, uint32_t duration, uint8_t 
 	// Initialize the pixel buffer
 	for(uint8_t i=0; i<patternLength; i++)
 	{
-			// rotates pattern and tests for "on"
-			if ((pattern >> i) & 0x01)
-			{
-				pixels[i] = onColor;
-			}
-			else
-			{
-				pixels[i] = offColor;
-			}
+		// rotates pattern and tests for "on"
+		if ((pattern >> i) & 0x01)
+		{
+			pixels[i] = onColor;
+		}
+		else
+		{
+			pixels[i] = offColor;
+		}
 	}
 
 	// clear LEDs
@@ -342,7 +344,7 @@ void NeopixelWrapper::scrollPattern(uint16_t repeat, uint32_t duration, uint8_t 
 		// Loop through all LEDs (plus some)
 		for(int16_t j=0; j<(FastLED.size()+patternLength-1); j++ )
 		{
-			// Set start location
+	        // Set start location
 			if( direction == LEFT )
 			{
 				if( (j >= (patternLength-1)) && (j <= (FastLED.size() - 1)) )
@@ -1422,6 +1424,8 @@ void NeopixelWrapper::setPattern(int16_t startIndex, uint8_t length, uint8_t pat
 
     for(index=0; index<length; index++)
     {
+    	worker();
+
     	// Safety measure - allows pattern length to be > amount of pixels left
 		if( (startIndex+index) >= FastLED.size())
 		{
@@ -1504,6 +1508,8 @@ void NeopixelWrapper::setPixel(int16_t index, CRGB color)
     	Serial.println(F("-SKIPPING"));
 #endif
 	}
+	Helper::workYield(); // Give time to ESP
+
 }
 
 /**

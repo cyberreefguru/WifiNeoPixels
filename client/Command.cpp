@@ -192,6 +192,7 @@ uint8_t Command::buildResponse(uint8_t *buffer)
 
 	StaticJsonBuffer<CMD_BUFFER_SIZE> jsonBuffer;
 	JsonObject& root = jsonBuffer.createObject();
+	Helper::workYield(); // Give time to ESP
 
 	// Our command is "complete"
 	root[KEY_CMD] = CMD_COMPLETE;
@@ -206,6 +207,7 @@ uint8_t Command::buildResponse(uint8_t *buffer)
 	root[KEY_STATUS] = STATUS_SUCCESS;
 
 	root.printTo((char *)buffer, CMD_BUFFER_SIZE);
+	Helper::workYield(); // Give time to ESP
 
 	status = true;
 
@@ -221,7 +223,6 @@ void Command::shiftRelayNodes()
 	}
 	relayNodes[relayNodeSize-1] = 0; // zero last node
 	relayNodeSize -= 1;
-
 }
 
 void Command::dump()

@@ -47,6 +47,10 @@
 #define FLASH_SIZE				150
 #define CRC_SIZE				145
 
+// TODO - add mqtt port to configuration
+// TODO - add mqtt username and password to configuration
+
+
 class Configuration
 {
 public:
