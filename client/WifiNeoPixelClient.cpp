@@ -11,6 +11,7 @@ static NeopixelWrapper controller;
 static PubSubWrapper pubsubw;
 static WifiWrapper wifiw;
 static Menu menu;
+static StatusIndicator statusIndicator;
 
 // software timer instance
 os_timer_t ledTimer;
@@ -48,12 +49,23 @@ void setup()
 	// Flash internal LED to show we're alive
 	startupPause();
 
-	// Set LED variables
-	gLedCounter = 0;
-	gStatus = STATUS_BOOTING;
+	// Print status message
+	Serial.println( F("Configuring status LEDs...") );
+	if( statusIndicator.initialize() == 0 )
+	{
+		while(1)
+		{
+			Helper::toggleLed();
+			delay(100);
+		}
+	}
+	statusIndicator.setGeneralStatus(STATUS_COLOR_BOOTING);
 
-	// Print stastus message
+	// Print status message
 	Serial.println( F("Configuring timers and watchdog...") );
+
+	// Set status
+	setStatus(STATUS_BOOTING);
 
 	// Setup and initiate internal timer
 	os_timer_setfn(&ledTimer, ledTimerCallback, NULL);
@@ -65,13 +77,16 @@ void setup()
 
 	// Initialize the configuration object; configs stored in Flash
 	Serial.println( F("Initializing configuration...") );
+	statusIndicator.setConfigStatus(STATUS_COLOR_BOOTING);
     if( config.initialize() )
     {
         Serial.println( F("\nConfiguration initialized.") );
+    	statusIndicator.setConfigStatus(STATUS_COLOR_OK);
     }
     else
     {
     	Serial.println( F("\n**ERROR - failed to initialize configuration") );
+    	statusIndicator.setConfigStatus(STATUS_COLOR_FAIL);
     	Helper::error(STATUS_ERROR_CONFIG); // never returns from here
     }
 
@@ -165,18 +180,27 @@ boolean initialize()
 	Serial.println(F("Configuring wifi..."));
 
 	// Initialize WIFI
+	statusIndicator.setWifiStatus(STATUS_COLOR_BOOTING);
 	if( wifiw.initialize(&config) )
 	{
+    	statusIndicator.setWifiStatus(STATUS_COLOR_OK);
+
 		Serial.println(F("Configuring queue..."));
 
 		// Initialize pubsub
+		statusIndicator.setQueueStatus(STATUS_COLOR_BOOTING);
 		if( pubsubw.initialize(&config, &wifiw) )
 		{
+	    	statusIndicator.setQueueStatus(STATUS_COLOR_OK);
+
 			Serial.println(F("Configuring leds..."));
 
 			// Initialize the LEDs
+			statusIndicator.setDriverStatus(STATUS_COLOR_BOOTING);
 			if ( controller.initialize(config.getNumberLeds(), DEFAULT_INTENSITY) )
 			{
+		    	statusIndicator.setDriverStatus(STATUS_COLOR_OK);
+
 				yield(); // give time to ESP
 				Serial.print(F("\nLED Controller initialized..."));
 				controller.fill(CRGB::White, true);
@@ -193,18 +217,21 @@ boolean initialize()
 			else
 			{
 				Serial.println(F("\nERROR - failed to configure LED module"));
+		    	statusIndicator.setDriverStatus(STATUS_COLOR_FAIL);
 				setStatus(STATUS_ERROR_DRIVER);
 			}
 		}
 		else
 		{
 			Serial.println(F("\nERROR - failed to configure queue"));
+	    	statusIndicator.setQueueStatus(STATUS_COLOR_FAIL);
 			setStatus(STATUS_ERROR_QUEUE);
 		}
 	}
 	else
 	{
 		Serial.println(F("\nERROR - failed to configure WIFI"));
+    	statusIndicator.setWifiStatus(STATUS_COLOR_FAIL);
 		setStatus(STATUS_ERROR_WIFI);
 	}
 
@@ -476,27 +503,11 @@ void startupPause()
 	uint8_t i;
 
 	Helper::setLed(OFF);
-
-	for(i=0; i< 20; i++)
+	for(i=0; i< 10; i++)
 	{
 		Helper::toggleLed();
-		delay(100);
-//		Helper::toggleLed(100);
+		delay(200);
 	}
-
-//	Helper::setLed(ON);
-////	digitalWrite(BUILT_IN_LED, LOW);
-//	delay(1000);
-//	yield();
-//	Helper::setLed(OFF);
-////	digitalWrite(BUILT_IN_LED, HIGH);
-//	delay(1000);
-//	yield();
-//	Helper::setLed(ON);
-////	digitalWrite(BUILT_IN_LED, LOW);
-//	delay(2000);
-//	yield();
-
 	Helper::setLed(OFF);
 
 }
@@ -523,6 +534,8 @@ void ledTimerCallback(void *pArg)
 {
 	gLedCounter += 1;
 
+	CRGB color;
+
 	// NOTE - do not use zero for the state select - it will always be at least 1
 	// since we increment the counter above
 
@@ -532,55 +545,15 @@ void ledTimerCallback(void *pArg)
 		gLedCounter = 0;
 		break;
 	case STATUS_BOOTING:
-		switch( gLedCounter )
-		{
-		case 1:
-			Helper::setLed(ON);
-			break;
-		case 3:
-			Helper::setLed(OFF);
-			gLedCounter = 0;
-			break;
-		default:
-			break;
-		}
+		gLedCounter = 0;
+		statusIndicator.setGeneralStatus(STATUS_COLOR_BOOTING);
 		break;
 	case STATUS_WAITING:
-
-		// Create heart beat - on 1 cycle, off 2 cycles, on 1 cycle, off 6 cycles
-		switch( gLedCounter )
-		{
-		case 1:
-			Helper::setLed(ON);
-//			digitalWrite(BUILT_IN_LED, 0 );
-			break;
-		case 2:
-			Helper::setLed(OFF);
-//			digitalWrite(BUILT_IN_LED, 1 );
-			break;
-		case 4:
-			Helper::setLed(ON);
-//			digitalWrite(BUILT_IN_LED, 0 );
-			break;
-		case 5:
-			Helper::setLed(OFF);
-//			digitalWrite(BUILT_IN_LED, 1);
-			break;
-		case 11:
-			gLedCounter = 0;
-			break;
-		default:
-			break;
-		}
+		color = STATUS_COLOR_OK;
 		break;
 	case STATUS_PROCESSING:
-		if( gLedCounter == 4 )
-		{
-			digitalWrite(BUILT_IN_LED, !digitalRead( BUILT_IN_LED ) );
-			gLedCounter = 0;
-		}
+		color = STATUS_COLOR_PROCESSING;
 		break;
-
 	case STATUS_ERROR_GENERAL:
 	case STATUS_ERROR_QUEUE:
 	case STATUS_ERROR_WIFI:
@@ -591,6 +564,35 @@ void ledTimerCallback(void *pArg)
 		break;
 	default:
 		break;
+	}
+
+	if( gStatus == STATUS_WAITING || gStatus == STATUS_PROCESSING )
+	{
+		// Create heart beat - on 1 cycle, off 2 cycles, on 1 cycle, off 6 cycles
+		switch( gLedCounter )
+		{
+		case 1:
+			statusIndicator.setGeneralStatus(color);
+			break;
+		case 2:
+//			Helper::setLed(OFF);
+			statusIndicator.setGeneralStatus(STATUS_COLOR_NONE);
+			break;
+		case 4:
+//			Helper::setLed(ON);
+			statusIndicator.setGeneralStatus(color);
+			break;
+		case 5:
+//			Helper::setLed(OFF);
+			statusIndicator.setGeneralStatus(STATUS_COLOR_NONE);
+			break;
+		case 11:
+			gLedCounter = 0;
+			break;
+		default:
+			break;
+		}
+
 	}
 
 } // End of timerCallback

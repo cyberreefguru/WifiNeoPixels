@@ -24,6 +24,7 @@
 #define YELLOW	CRGB::Yellow
 #define ORANGE	CRGB::Orange
 #define PURPLE	CRGB::Purple
+#define PINK	CRGB::HotPink
 #define RAINBOW	CRGB::Black
 
 #define DOWN 	0
@@ -77,11 +78,13 @@ public:
 
 protected:
 	CRGB *leds;
-
+	uint8_t intensity;
 	void setPixel(int16_t index, CRGB color);
 	void setPatternTimed(int16_t index, uint8_t pattern, CRGB onColor, CRGB offColor, uint32_t onTime, uint32_t offTime, uint8_t clearAfter);
 	void setPixelTimed(int16_t index, CRGB newColor, uint32_t onTime, uint32_t offTime, uint8_t clearAfter);
 	void setPattern(int16_t startIndex, uint8_t length, uint8_t pattern, uint8_t patternLength, CRGB onColor, CRGB offColor, uint8_t show);
+
+	void resetIntensity();
 
 
 };

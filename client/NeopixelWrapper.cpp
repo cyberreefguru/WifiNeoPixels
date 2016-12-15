@@ -11,7 +11,8 @@
 
 #include "NeopixelWrapper.h"
 
-void resetIntensity();
+CLEDController *ledController;
+
 
 
 /**
@@ -20,6 +21,7 @@ void resetIntensity();
 NeopixelWrapper::NeopixelWrapper()
 {
 	leds = 0;
+	intensity = DEFAULT_INTENSITY;
 }
 
 
@@ -45,11 +47,11 @@ boolean NeopixelWrapper::initialize(uint8_t numLeds, uint8_t intensity)
 	else
 	{
 //		FastLED.addLeds<WS2812, D8>(leds, numLeds).setCorrection(TypicalLEDStrip); // string
-		FastLED.addLeds<MY_CONTROLLER, MY_LED_PIN>(leds, numLeds).setCorrection(MY_COLOR_CORRECTION); // strip
+		ledController = &FastLED.addLeds<MY_CONTROLLER, MY_LED_PIN>(leds, numLeds).setCorrection(MY_COLOR_CORRECTION); // strip
 		Helper::workYield();
 
-		// set master brightness control
-		FastLED.setBrightness(intensity);
+//		// set master brightness control
+//		FastLED.setBrightness(intensity);
 		status = true;
 	}
 
@@ -62,7 +64,7 @@ boolean NeopixelWrapper::initialize(uint8_t numLeds, uint8_t intensity)
  */
 CRGB NeopixelWrapper::getPixel(int16_t index)
 {
-	if( index <0 || index >= FastLED.size() )
+	if( index <0 || index >= ledController->size() )
 	{
 	    return leds[index];
 	}
@@ -83,14 +85,15 @@ CRGB NeopixelWrapper::getPixel(int16_t index)
  * Sets the color of pixel.  No action if pixel is out of bounds
  *
  */
-void NeopixelWrapper::setPixel(int16_t index, CRGB color, uint8_t show)
+void NeopixelWrapper::setPixel(int16_t index, CRGB color, uint8_t s)
 {
-	if( index <0 || index >= FastLED.size() )
+	if( index <0 || index >= ledController->size() )
 	{
 	    leds[index] = color;
-		if (show)
+		if (s)
 		{
-			FastLED.show();
+			show();
+//			FastLED.show();
 		}
 	}
 	else
@@ -108,7 +111,9 @@ void NeopixelWrapper::setPixel(int16_t index, CRGB color, uint8_t show)
 
 void NeopixelWrapper::show()
 {
-	FastLED.show();
+	ledController->showLeds(intensity);
+//
+//	FastLED.show();
 }
 
 /**
@@ -116,7 +121,8 @@ void NeopixelWrapper::show()
  */
 uint8_t NeopixelWrapper::getIntensity()
 {
-	return FastLED.getBrightness();
+	return intensity;
+//	return FastLED.getBrightness();
 }
 
 /**
@@ -125,7 +131,8 @@ uint8_t NeopixelWrapper::getIntensity()
  */
 void NeopixelWrapper::setIntensity(uint8_t i)
 {
-	FastLED.setBrightness(i);
+	intensity = i;
+//	FastLED.setBrightness(i);
 }
 
 /**
@@ -134,18 +141,19 @@ void NeopixelWrapper::setIntensity(uint8_t i)
  * @color - color to set
  * @show - if true, sets color immediately
  */
-void NeopixelWrapper::fill(CRGB color, uint8_t show)
+void NeopixelWrapper::fill(CRGB color, uint8_t s)
 {
 	resetIntensity();
 
-	for (uint8_t i = 0; i < FastLED.size(); i++)
+	for (uint8_t i = 0; i < ledController->size(); i++)
     {
         leds[i] = color;
     }
 	worker();
-    if (show)
+    if (s)
     {
-        FastLED.show();
+    	show();
+//        FastLED.show();
     }
 }
 
@@ -158,7 +166,7 @@ void NeopixelWrapper::fill(CRGB color, uint8_t show)
 void NeopixelWrapper::fillPattern(uint8_t pattern, CRGB onColor, CRGB offColor)
 {
 	resetIntensity();
-	setPattern(0, FastLED.size(), pattern, 8, onColor, offColor, true);
+	setPattern(0, ledController->size(), pattern, 8, onColor, offColor, true);
 }
 
 /**
@@ -188,15 +196,17 @@ void NeopixelWrapper::wipe(uint16_t repeat, uint32_t duration, uint8_t direction
 		if( direction == LEFT )
 		{
 			// Loop through all LEDs
-			for(uint8_t j=0; j<FastLED.size(); j++ )
+			for(uint8_t j=0; j<ledController->size(); j++ )
 			{
 				leds[j] = onColor;
-				FastLED.show();
+				show();
+//				FastLED.show();
 				if( commandDelay(onTime) ) break;
 				if( clearAfter )
 				{
 					leds[j] = offColor;
-					FastLED.show();
+					show();
+//					FastLED.show();
 					if( commandDelay(offTime) ) break;
 				}
 
@@ -206,15 +216,17 @@ void NeopixelWrapper::wipe(uint16_t repeat, uint32_t duration, uint8_t direction
 		else if(direction == RIGHT )
 		{
 			// Loop through all LEDs
-			for(int16_t j=FastLED.size()-1; j>=0; j -=1 )
+			for(int16_t j=ledController->size()-1; j>=0; j -=1 )
 			{
 				leds[j] = onColor;
-				FastLED.show();
+				show();
+//					FastLED.show();
 				if( commandDelay(onTime) ) break;
 				if( clearAfter )
 				{
 					leds[j] = offColor;
-					FastLED.show();
+					show();
+//					FastLED.show();
 					if( commandDelay(offTime) ) break;
 				}
 
@@ -254,7 +266,7 @@ void NeopixelWrapper::rotatePattern(uint16_t repeat, uint32_t duration, uint8_t 
 
 	while (isCommandAvailable() == false)
 	{
-		setPattern(0, FastLED.size(), pattern, 8, onColor, offColor, true);
+		setPattern(0, ledController->size(), pattern, 8, onColor, offColor, true);
 		if (commandDelay(onTime)) break;
 		if (direction == LEFT)
 		{
@@ -342,12 +354,12 @@ void NeopixelWrapper::scrollPattern(uint16_t repeat, uint32_t duration, uint8_t 
 	while (isCommandAvailable() == false)
 	{
 		// Loop through all LEDs (plus some)
-		for(int16_t j=0; j<(FastLED.size()+patternLength-1); j++ )
+		for(int16_t j=0; j<(ledController->size()+patternLength-1); j++ )
 		{
 	        // Set start location
 			if( direction == LEFT )
 			{
-				if( (j >= (patternLength-1)) && (j <= (FastLED.size() - 1)) )
+				if( (j >= (patternLength-1)) && (j <= (ledController->size() - 1)) )
 				{
 					// copy all pixels to leds
 					curIndex = j;
@@ -366,10 +378,10 @@ void NeopixelWrapper::scrollPattern(uint16_t repeat, uint32_t duration, uint8_t 
 						leds[curIndex--] = pixels[i];
 					}
 				}
-				else if(j > (FastLED.size()-1))
+				else if(j > (ledController->size()-1))
 				{
-					curIndex = FastLED.size()-1;
-					uint8_t bitsToCopy = (patternLength-1) - (j-FastLED.size());
+					curIndex = ledController->size()-1;
+					uint8_t bitsToCopy = (patternLength-1) - (j-ledController->size());
 					uint8_t start = (patternLength-bitsToCopy);
 	#ifdef __DEBUG
 					Serial.print(F("j="));
@@ -395,10 +407,10 @@ void NeopixelWrapper::scrollPattern(uint16_t repeat, uint32_t duration, uint8_t 
 			} // end if LEFT
 			else if(direction == RIGHT )
 			{
-				if( (j >= (patternLength-1)) && (j <= (FastLED.size() - 1)) )
+				if( (j >= (patternLength-1)) && (j <= (ledController->size() - 1)) )
 				{
 					// copy all pixels to leds
-					curIndex = FastLED.size() - j - 1;
+					curIndex = ledController->size() - j - 1;
 					for(uint8_t i=0; i<patternLength; i++)
 					{
 						leds[curIndex++] = pixels[i];
@@ -406,18 +418,18 @@ void NeopixelWrapper::scrollPattern(uint16_t repeat, uint32_t duration, uint8_t 
 				}
 				else if( j < (patternLength-1) )
 				{
-					curIndex = FastLED.size() - j - 1;
-					uint8_t bitsToCopy = FastLED.size() - curIndex;
+					curIndex = ledController->size() - j - 1;
+					uint8_t bitsToCopy = ledController->size() - curIndex;
 
 					for(uint8_t i=0; i< bitsToCopy; i++)
 					{
 						leds[curIndex++] = pixels[i];
 					}
 				}
-				else if(j > (FastLED.size()-1))
+				else if(j > (ledController->size()-1))
 				{
 					curIndex = 0;
-					uint8_t bitsToCopy = (patternLength-1) - (j-FastLED.size());
+					uint8_t bitsToCopy = (patternLength-1) - (j-ledController->size());
 					uint8_t start = (patternLength-bitsToCopy);
 	#ifdef __DEBUG
 					Serial.print(F("j="));
@@ -442,7 +454,8 @@ void NeopixelWrapper::scrollPattern(uint16_t repeat, uint32_t duration, uint8_t 
 				}
 			} //end if RIGHT
 
-			FastLED.show();
+			show();
+//					FastLED.show();
 			commandDelay(onTime);
 			if( clearAfter )
 			{
@@ -494,18 +507,18 @@ void NeopixelWrapper::bounce(uint16_t repeat, uint32_t duration, uint8_t pattern
 	if (direction == LEFT)
 	{
 		lstart = 0;
-		lend = FastLED.size() - patternLength;
+		lend = ledController->size() - patternLength;
 
-		rstart = FastLED.size() - patternLength - 1;
+		rstart = ledController->size() - patternLength - 1;
 		rend = 0;
 	}
 	else if (direction == RIGHT)
 	{
-		rstart = FastLED.size() - patternLength;
+		rstart = ledController->size() - patternLength;
 		rend = 0;
 
 		lstart = 1;
-		lend = FastLED.size() - patternLength;
+		lend = ledController->size() - patternLength;
 	}
 	else
 	{
@@ -555,8 +568,8 @@ void NeopixelWrapper::bounce(uint16_t repeat, uint32_t duration, uint8_t pattern
 			if( first )
 			{
 				lstart = 1;
-				lend = FastLED.size() - patternLength - 1;
-				rstart = FastLED.size() - patternLength;
+				lend = ledController->size() - patternLength - 1;
+				rstart = ledController->size() - patternLength;
 				rend = 0;
 				first = false;
 			}
@@ -596,11 +609,11 @@ void NeopixelWrapper::bounce(uint16_t repeat, uint32_t duration, uint8_t pattern
 
 			if( first )
 			{
-				rstart = FastLED.size() - patternLength -1;
+				rstart = ledController->size() - patternLength -1;
 				rend = 0;
 
 				lstart = 1;
-				lend = FastLED.size() - patternLength;
+				lend = ledController->size() - patternLength;
 				first = false;
 			}
 
@@ -629,7 +642,7 @@ void NeopixelWrapper::middle(uint16_t repeat, uint32_t duration, uint8_t directi
 	uint16_t count = 0;
 	uint32_t endTime = millis() + duration;;
 
-	uint8_t numPixels = FastLED.size();
+	uint8_t numPixels = ledController->size();
 	uint8_t halfNumPixels = numPixels/2;
 
 	resetIntensity();
@@ -643,14 +656,16 @@ void NeopixelWrapper::middle(uint16_t repeat, uint32_t duration, uint8_t directi
 			{
 				leds[i] = onColor;
 				leds[(numPixels-1)-i] = onColor;
-				FastLED.show();
+				show();
+//					FastLED.show();
 				if( commandDelay(onTime) ) return;
 
 				if( clearAfter == true )
 				{
 					leds[i] = offColor;
 					leds[(numPixels-1)-i] = offColor;
-					FastLED.show();
+					show();
+//					FastLED.show();
 					if( commandDelay(offTime) ) return;
 				}
 			}
@@ -661,14 +676,16 @@ void NeopixelWrapper::middle(uint16_t repeat, uint32_t duration, uint8_t directi
 			{
 				leds[halfNumPixels-i] = onColor;
 				leds[halfNumPixels+i] = onColor;
-				FastLED.show();
+				show();
+//					FastLED.show();
 				if( commandDelay(onTime) ) return;
 
 				if( clearAfter == true )
 				{
 					leds[halfNumPixels-i] = offColor;
 					leds[halfNumPixels+i] = offColor;
-					FastLED.show();
+					show();
+//					FastLED.show();
 					if( commandDelay(offTime) ) return;
 				}
 			}
@@ -707,7 +724,7 @@ void NeopixelWrapper::randomFlash(uint16_t repeat, uint32_t duration, uint32_t o
 
 	while (isCommandAvailable() == false)
 	{
-		i = random(FastLED.size());
+		i = random(ledController->size());
 		if( onColor == (CRGB)RAINBOW )
 		{
 			leds[i] = CHSV(random8(0, 255), 255, 255);
@@ -716,7 +733,8 @@ void NeopixelWrapper::randomFlash(uint16_t repeat, uint32_t duration, uint32_t o
 		{
 			leds[i] = onColor;
 		}
-		FastLED.show();
+		show();
+//					FastLED.show();
 		if (commandDelay(onTime)) break;
 		leds[i] = offColor;
 		if (commandDelay(offTime)) break;
@@ -748,14 +766,18 @@ void NeopixelWrapper::fade(uint8_t direction, uint8_t fadeIncrement, uint32_t ti
 
 	if( direction == DOWN )
 	{
-		FastLED.setBrightness(255);
-		FastLED.showColor(color);
+//		FastLED.setBrightness(255);
+//		FastLED.showColor(color);
+		intensity = 255;
 	}
 	else if( direction == UP )
 	{
-		FastLED.setBrightness(0);
-		FastLED.showColor(color);
+//		FastLED.setBrightness(0);
+//		FastLED.showColor(color);
+		intensity = 0;
 	}
+	ledController->showColor(color, intensity);
+
 	while(i<255)
 	{
 		if( commandDelay(time) ) break;
@@ -768,13 +790,16 @@ void NeopixelWrapper::fade(uint8_t direction, uint8_t fadeIncrement, uint32_t ti
 
 		if( direction == DOWN )
 		{
-			FastLED.setBrightness(255-i);
+			intensity = 255-i;
+//			FastLED.setBrightness(255-i);
 		}
 		else if( direction == UP)
 		{
-			FastLED.setBrightness(i);
+			intensity = i;
+//			FastLED.setBrightness(i);
 		}
-		FastLED.showColor(color);
+		ledController->showColor(color, intensity);
+//		FastLED.showColor(color);
 
 	}
 
@@ -883,16 +908,17 @@ void NeopixelWrapper::rainbow(uint32_t duration, uint8_t glitterProbability, CRG
     while(isCommandAvailable() == false )
     {
         // FastLED's built-in rainbow generator
-        fill_rainbow(leds, FastLED.size(), hue, 7);
+        fill_rainbow(leds, ledController->size(), hue, 7);
         if (glitterProbability > 0)
         {
             if (random8() < glitterProbability)
             {
-                leds[random16(FastLED.size())] += glitterColor;
+                leds[random16(ledController->size())] += glitterColor;
             }
 
         }
-        FastLED.show();
+		show();
+//					FastLED.show();
         commandDelay( onTime );
         hueTime +=1;
         if( hueTime == hueUpdateTime )
@@ -946,7 +972,7 @@ void NeopixelWrapper::rainbowFade(uint32_t duration, uint32_t onTime)
         sHue16 += deltams * beatsin88(400, 5, 9);
         uint16_t brightnesstheta16 = sPseudotime;
 
-        for (uint16_t i = 0; i < (uint16_t) FastLED.size(); i++)
+        for (uint16_t i = 0; i < (uint16_t) ledController->size(); i++)
         {
             hue16 += hueinc16;
             uint8_t hue8 = hue16 / 256;
@@ -961,12 +987,13 @@ void NeopixelWrapper::rainbowFade(uint32_t duration, uint32_t onTime)
             CRGB newcolor = CHSV(hue8, sat8, bri8);
 
             uint16_t pixelnumber = i;
-            pixelnumber = (FastLED.size() - 1) - pixelnumber;
+            pixelnumber = (ledController->size() - 1) - pixelnumber;
 
             nblend(leds[pixelnumber], newcolor, 64);
         }
 
-        FastLED.show();
+		show();
+//					FastLED.show();
         commandDelay( onTime );
 
 		if( duration > 0 && millis() > endTime )
@@ -1000,8 +1027,8 @@ void NeopixelWrapper::confetti(uint32_t duration, CRGB color, uint8_t fadeBy, ui
 	while(isCommandAvailable() == false )
     {
         // random colored speckles that blink in and fade smoothly
-        fadeToBlackBy(leds, FastLED.size(), fadeBy);
-        int pos = random16(FastLED.size());
+        fadeToBlackBy(leds, ledController->size(), fadeBy);
+        int pos = random16(ledController->size());
         if (color == (CRGB)RAINBOW)
         {
             leds[pos] += CHSV(hue + random8(64), 200, 255);
@@ -1016,7 +1043,8 @@ void NeopixelWrapper::confetti(uint32_t duration, CRGB color, uint8_t fadeBy, ui
         {
             leds[pos] += color;
         }
-        FastLED.show();
+		show();
+//					FastLED.show();
         commandDelay( onTime );
         hueTime += 1;
 
@@ -1047,8 +1075,8 @@ void NeopixelWrapper::cylon(uint16_t repeat, uint32_t duration, CRGB color, uint
 
     while(isCommandAvailable() == false )
     {
-        fadeToBlackBy(leds, FastLED.size(), 20);
-        int pos = beatsin16(fps, 0, FastLED.size());
+        fadeToBlackBy(leds, ledController->size(), 20);
+        int pos = beatsin16(fps, 0, ledController->size());
         if (color == (CRGB)RAINBOW)
         {
             leds[pos] += CHSV(hue, 255, 192);
@@ -1063,7 +1091,8 @@ void NeopixelWrapper::cylon(uint16_t repeat, uint32_t duration, CRGB color, uint
             leds[pos] += color;
         }
 
-        FastLED.show();
+		show();
+//					FastLED.show();
         commandDelay( fadeTime );
         hueTime += 1;
 
@@ -1108,7 +1137,7 @@ void NeopixelWrapper::bpm(uint32_t duration, uint32_t onTime, uint8_t hueUpdateT
         uint8_t BeatsPerMinute = 62;
         CRGBPalette16 palette = PartyColors_p;
         uint8_t beat = beatsin8(BeatsPerMinute, 64, 255);
-        for (int i = 0; i < FastLED.size(); i++)
+        for (int i = 0; i < ledController->size(); i++)
         { //9948
             leds[i] = ColorFromPalette(palette, hue + (i * 2), beat - hue + (i * 10));
         }
@@ -1118,7 +1147,8 @@ void NeopixelWrapper::bpm(uint32_t duration, uint32_t onTime, uint8_t hueUpdateT
         	hue +=1;
         }
 
-        FastLED.show();
+		show();
+//					FastLED.show();
         commandDelay( onTime );
         hueTime += 1;
 
@@ -1147,15 +1177,16 @@ void NeopixelWrapper::juggle(uint32_t duration, uint32_t onTime)
 	while(isCommandAvailable() == false )
     {
         // eight colored dots, weaving in and out of sync with each other
-        fadeToBlackBy(leds, FastLED.size(), 20);
+        fadeToBlackBy(leds, ledController->size(), 20);
         byte dothue = 0;
         for (int i = 0; i < 8; i++)
         {
-            leds[beatsin16(i + 7, 0, FastLED.size())] |= CHSV(dothue, 200, 255);
+            leds[beatsin16(i + 7, 0, ledController->size())] |= CHSV(dothue, 200, 255);
             dothue += 32;
         }
 
-        FastLED.show();
+		show();
+//					FastLED.show();
         commandDelay( onTime );
 
 		if( duration > 0 && millis() > endTime )
@@ -1191,14 +1222,14 @@ void NeopixelWrapper::stack(uint16_t repeat, uint32_t duration, uint8_t directio
 		}
 		else
 		{
-			index = FastLED.size()-1;
+			index = ledController->size()-1;
 		}
 
-		for(uint8_t i=0; i<FastLED.size(); i++ )
+		for(uint8_t i=0; i<ledController->size(); i++ )
 		{
 			if(direction == DOWN )
 			{
-				for(int16_t j=FastLED.size(); j>index; j -= 1 )
+				for(int16_t j=ledController->size(); j>index; j -= 1 )
 				{
 					if( onColor == (CRGB)RAINBOW )
 					{
@@ -1208,10 +1239,12 @@ void NeopixelWrapper::stack(uint16_t repeat, uint32_t duration, uint8_t directio
 					{
 						leds[j] = onColor;
 					}
-					FastLED.show();
+					show();
+//					FastLED.show();
 					if( commandDelay( onTime) ) return;
 					leds[j] = offColor;
-					FastLED.show();
+					show();
+//					FastLED.show();
 				}
 				if( onColor == (CRGB)RAINBOW )
 				{
@@ -1221,7 +1254,8 @@ void NeopixelWrapper::stack(uint16_t repeat, uint32_t duration, uint8_t directio
 				{
 					leds[index] = onColor;
 				}
-				FastLED.show();
+				show();
+//					FastLED.show();
 				index += 1;
 			}
 			else if( direction == UP )
@@ -1236,10 +1270,12 @@ void NeopixelWrapper::stack(uint16_t repeat, uint32_t duration, uint8_t directio
 					{
 						leds[j] = onColor;
 					}
-					FastLED.show();
+					show();
+//					FastLED.show();
 					if( commandDelay( onTime) ) return;
 					leds[j] = offColor;
-					FastLED.show();
+					show();
+//					FastLED.show();
 				}
 				if( onColor == (CRGB)RAINBOW )
 				{
@@ -1249,7 +1285,8 @@ void NeopixelWrapper::stack(uint16_t repeat, uint32_t duration, uint8_t directio
 				{
 					leds[index] = onColor;
 				}
-				FastLED.show();
+				show();
+//					FastLED.show();
 				index -= 1;
 			}
 		} // end for size
@@ -1297,10 +1334,10 @@ void NeopixelWrapper::fillRandom(uint16_t repeat, uint32_t duration, CRGB onColo
 
 	while(isCommandAvailable() == false )
     {
-		total = FastLED.size();
+		total = ledController->size();
 		while( total > 0 )
 		{
-			index = random8(0, FastLED.size());
+			index = random8(0, ledController->size());
 			if( onColor == (CRGB)RAINBOW )
 			{
 				color = CHSV(random8(0, 255), 255, 255);
@@ -1308,7 +1345,8 @@ void NeopixelWrapper::fillRandom(uint16_t repeat, uint32_t duration, CRGB onColo
 			if( leds[index] == offColor || flag == true )
 			{
 				leds[index] = color;
-				FastLED.show();
+				show();
+//					FastLED.show();
 				total--;
 				if( commandDelay(onTime)) return;
 				if( clearAfter )
@@ -1355,7 +1393,7 @@ void NeopixelWrapper::setPatternTimed(int16_t startIndex, uint8_t pattern, CRGB 
 
 	for(uint8_t i=0; i<8; i++)
 	{
-		if(startIndex+i < FastLED.size() && startIndex+i >= 0)
+		if(startIndex+i < ledController->size() && startIndex+i >= 0)
 		{
 			currentColor[i] = leds[startIndex+i];
 		}
@@ -1367,12 +1405,13 @@ void NeopixelWrapper::setPatternTimed(int16_t startIndex, uint8_t pattern, CRGB 
     {
     	for(uint8_t i=0; i<8; i++)
     	{
-    		if(startIndex+i < FastLED.size() && startIndex+i >= 0)
+    		if(startIndex+i < ledController->size() && startIndex+i >= 0)
     		{
         		leds[startIndex+i] = currentColor[i];
     		}
     	}
-        FastLED.show();
+		show();
+//					FastLED.show();
         commandDelay(offTime);
     }
 }
@@ -1388,12 +1427,14 @@ void NeopixelWrapper::setPixelTimed(int16_t index, CRGB newColor, uint32_t onTim
 
     curColor = leds[index];
     leds[index] = newColor;
-    FastLED.show();
+	show();
+//					FastLED.show();
     commandDelay(onTime);
     if(clearAfter == true)
     {
         leds[index] = curColor;
-        FastLED.show();
+		show();
+//					FastLED.show();
         commandDelay(offTime);
     }
 
@@ -1405,7 +1446,7 @@ void NeopixelWrapper::setPixelTimed(int16_t index, CRGB newColor, uint32_t onTim
  * Stops filling when length is hit.
  *
  */
-void NeopixelWrapper::setPattern(int16_t startIndex, uint8_t length, uint8_t pattern, uint8_t patternLength, CRGB onColor, CRGB offColor, uint8_t show)
+void NeopixelWrapper::setPattern(int16_t startIndex, uint8_t length, uint8_t pattern, uint8_t patternLength, CRGB onColor, CRGB offColor, uint8_t s)
 {
     int16_t index;
     uint8_t patternIndex = 0;
@@ -1427,7 +1468,7 @@ void NeopixelWrapper::setPattern(int16_t startIndex, uint8_t length, uint8_t pat
     	worker();
 
     	// Safety measure - allows pattern length to be > amount of pixels left
-		if( (startIndex+index) >= FastLED.size())
+		if( (startIndex+index) >= ledController->size())
 		{
 #ifdef __DEBUG
     	Serial.print(F("WARN - pixel["));
@@ -1482,9 +1523,10 @@ void NeopixelWrapper::setPattern(int16_t startIndex, uint8_t length, uint8_t pat
 
     } // end for
 
-    if( show )
+    if( s )
     {
-    	FastLED.show();
+		show();
+//					FastLED.show();
     }
 
 }
@@ -1494,7 +1536,7 @@ void NeopixelWrapper::setPattern(int16_t startIndex, uint8_t length, uint8_t pat
  */
 void NeopixelWrapper::setPixel(int16_t index, CRGB color)
 {
-	if( index <0 || index >= FastLED.size() )
+	if( index <0 || index >= ledController->size() )
 	{
 	    leds[index] = color;
 	}
@@ -1516,10 +1558,14 @@ void NeopixelWrapper::setPixel(int16_t index, CRGB color)
  * If current intensity is 0, reset to default
  *
  */
-void resetIntensity()
+void NeopixelWrapper::resetIntensity()
 {
-	if( FastLED.getBrightness() == 0)
+	if(intensity == 0 )
 	{
-		FastLED.setBrightness( DEFAULT_INTENSITY );
+		intensity = DEFAULT_INTENSITY;
 	}
+//	if( FastLED.getBrightness() == 0)
+//	{
+//		FastLED.setBrightness( DEFAULT_INTENSITY );
+//	}
 }

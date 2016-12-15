@@ -79,7 +79,7 @@ void Helper::error(uint8_t errorCode)
 		// Flash LED the number of times based on error code
 		for(i=0; i<count; i++)
 		{
-			Helper::toggleLed(100);
+			Helper::toggleLedTimed(100);
 		}
 		Helper::delayYield( 500 );
 	}
@@ -88,7 +88,7 @@ void Helper::error(uint8_t errorCode)
 /**
  * Toggles LED on then off
  */
-void Helper::toggleLed(uint32_t time)
+void Helper::toggleLedTimed(uint32_t time)
 {
 	toggleLed();
 //	digitalWrite(BUILT_IN_LED, LOW);
@@ -209,10 +209,10 @@ int16_t Helper::readInt(uint8_t *b, uint8_t len)
  */
 int16_t Helper::readString(uint8_t *b, uint8_t len)
 {
-
 	uint8_t flag = false;
 	uint8_t c = 0;
 	int16_t i = 0;
+	uint8_t counter = 0;
 
 	// Clear buffer - guarantees string is null terminated
 	memset( b, 0, len );
@@ -224,6 +224,12 @@ int16_t Helper::readString(uint8_t *b, uint8_t len)
 		while(!Serial.available() )
 		{
 			worker();
+			counter++;
+			if(counter == 255)
+			{
+				counter = 0;
+				Helper::toggleLed();
+			}
 		}
 
 		// read character

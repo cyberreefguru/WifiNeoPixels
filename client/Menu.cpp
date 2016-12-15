@@ -287,7 +287,7 @@ void Menu::waitForConfig()
 
 	while (1)
 	{
-		Helper::toggleLed(50);
+		Helper::toggleLedTimed(50);
 
 		// Wait until user initiates command mode by pressing keys
 		if (Serial.available())

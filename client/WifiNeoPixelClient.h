@@ -18,6 +18,7 @@
 #include "Configuration.h"
 #include "Helper.h"
 #include "Menu.h"
+#include "StatusIndicator.h"
 
 
 #define NUM_PIXELS 4

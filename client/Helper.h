@@ -30,7 +30,7 @@ public:
 	static void delayYield(uint32_t time);
 	static void error(uint8_t error);
 	static void dumpBuffer(uint8_t *buf, uint8_t len);
-	static void toggleLed(uint32_t time);
+	static void toggleLedTimed(uint32_t time);
 	static void toggleLed();
 	static void setLed(uint8_t b);
 	static uint8_t getLed();
