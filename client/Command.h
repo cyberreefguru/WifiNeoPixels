@@ -47,6 +47,8 @@
 #define KEY_INDEX					"idx"
 #define KEY_SHOW					"s"
 #define KEY_UNIQUE_ID				"uid"
+#define KEY_NUMBER					"n"
+
 
 // Basic Functions
 #define CMD_FILL                0x01	// Fills strip with specified color
@@ -174,6 +176,9 @@ public:
 	uint8_t getHueUpdateTime() const;
 	void setHueUpdateTime(uint8_t updateTime);
 
+	uint8_t getNumber() const;
+	void setNumber(uint8_t updateTime);
+
 private:
 	uint8_t command;
 	uint32_t uniqueId;
@@ -207,6 +212,7 @@ private:
 	uint32_t bounceTime;
 	uint32_t fadeTime;
 	uint8_t fadeIncrement;
+	uint8_t number;
 
 };
 

@@ -13,8 +13,6 @@
 
 CLEDController *ledController;
 
-
-
 /**
  * Constructor
  */
@@ -712,31 +710,49 @@ void NeopixelWrapper::middle(uint16_t repeat, uint32_t duration, uint8_t directi
 /**
  * Flashes random LED with specified color
  */
-void NeopixelWrapper::randomFlash(uint16_t repeat, uint32_t duration, uint32_t onTime, uint32_t offTime, CRGB onColor, CRGB offColor)
+void NeopixelWrapper::randomFlash(uint16_t repeat, uint32_t duration, uint32_t onTime, uint32_t offTime, CRGB onColor, CRGB offColor, uint8_t number)
 {
 	uint16_t count = 0;
 	uint32_t endTime = millis() + duration;;
 
-	uint8_t i;
+	uint8_t i, j;
 
 	resetIntensity();
 	fill(offColor, true);
+	if( number == 0)
+	{
+		number = 1;
+	}
+	if( number > ledController->size() )
+	{
+		number = ledController->size();
+	}
 
 	while (isCommandAvailable() == false)
 	{
-		i = random(ledController->size());
-		if( onColor == (CRGB)RAINBOW )
+		for(j=0; j<number; j++)
 		{
-			leds[i] = CHSV(random8(0, 255), 255, 255);
+			do
+			{
+				i = random(ledController->size());
+
+			} while( leds[i] != offColor );
+
+			if( onColor == (CRGB)RAINBOW )
+			{
+				leds[i] = CHSV(random8(0, 255), 255, 255);
+			}
+			else
+			{
+				leds[i] = onColor;
+			}
 		}
-		else
-		{
-			leds[i] = onColor;
-		}
+
 		show();
-//					FastLED.show();
+
 		if (commandDelay(onTime)) break;
-		leds[i] = offColor;
+		fill(offColor, true);
+//		leds[i] = offColor;
 		if (commandDelay(offTime)) break;
 
 		count += 1;

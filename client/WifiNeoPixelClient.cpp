@@ -345,7 +345,7 @@ void parseCommand()
 			break;
 		case CMD_RANDOM_FLASH:
 			Serial.println(F("RANDOM_FLASH"));
-			controller.randomFlash(cmd.getRepeat(),cmd.getDuration(), cmd.getOnTime(), cmd.getOffTime(), cmd.getOnColor(), cmd.getOffColor());
+			controller.randomFlash(cmd.getRepeat(),cmd.getDuration(), cmd.getOnTime(), cmd.getOffTime(), cmd.getOnColor(), cmd.getOffColor(), cmd.getNumber() );
 			break;
 		case CMD_FADE:
 			Serial.println(F("FADE"));

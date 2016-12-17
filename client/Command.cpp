@@ -112,8 +112,8 @@ uint8_t Command::parse(uint8_t* b)
 		offTime = obj[KEY_OFF_TIME].as<uint32_t>();
 		bounceTime = obj[KEY_BOUNCE_TIME].as<uint32_t>();
 		fadeTime = obj[KEY_FADE_TIME].as<uint32_t>();
-
 		fadeIncrement = obj[KEY_FADE_INCREMENT].as<uint8_t>();
+		number = obj[KEY_NUMBER].as<uint8_t>();
 
 		if( obj.containsKey(KEY_RELAY_NODES) )
 		{
@@ -175,6 +175,7 @@ uint8_t Command::buildCommand(uint8_t *buffer)
 	root[KEY_BOUNCE_TIME] = bounceTime;
 	root[KEY_FADE_TIME] = fadeTime;
 	root[KEY_FADE_INCREMENT] = fadeIncrement;
+	root[KEY_NUMBER] = number;
 
 	root[KEY_REPEAT] = repeat;
 	root[KEY_DURATION] = duration;
@@ -297,6 +298,8 @@ void Command::dump()
 	Serial.print( fadeTime );
 	Serial.print(", fadeIncrement: ");
 	Serial.println( fadeIncrement );
+	Serial.print(", number: ");
+	Serial.println( number );
 
 #endif
 }
@@ -513,8 +516,6 @@ void Command::setPatternLength(uint8_t patternLength)
 	this->patternLength = patternLength;
 }
 
-
-
 uint8_t Command::getProbability() const
 {
 	return probability;
@@ -543,6 +544,16 @@ uint8_t Command::getHueUpdateTime() const
 void Command::setHueUpdateTime(uint8_t updateTime)
 {
 	this->hueUpdateTime = updateTime;
+}
+
+uint8_t Command::getNumber() const
+{
+	return number;
+}
+
+void Command::setNumber(uint8_t n)
+{
+	this->number = n;
 }
 
 uint8_t Command::getNotifyOnComplete() const
