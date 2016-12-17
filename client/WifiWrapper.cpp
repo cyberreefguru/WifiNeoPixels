@@ -34,6 +34,7 @@ uint8_t WifiWrapper::initialize()
 {
 	uint8_t flag = false;
 	uint8_t count = 0;
+	char hostname[20];
 
 	Serial.println(F("Initializing WIFI..."));
 
@@ -76,9 +77,6 @@ uint8_t WifiWrapper::initialize()
 	{
 		Serial.println( F("NO SHIELD") );
 	}
-
-	// Pause to allow WIFI to stabilize
-//	delay(500);
 
 	// If connected, reset connection
 	if( WiFi.status() == WL_CONNECTED )
@@ -123,6 +121,10 @@ uint8_t WifiWrapper::initialize()
 
 		Serial.println(F("Setting up OTA..."));
 
+		sprintf(hostname, "lednode-%i", config->getNodeId() );
+
+		ArduinoOTA.setHostname(hostname);
+
 		ArduinoOTA.onStart([]() {
 			Serial.println("OTA Start");
 		});
@@ -163,6 +165,18 @@ uint8_t WifiWrapper::initialize()
 WiFiClient& WifiWrapper::getWifiClient()
 {
 	return wifi;
+}
+
+uint8_t WifiWrapper::connected()
+{
+	if( WiFi.status() == WL_CONNECTED )
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 }
 
 void WifiWrapper::work()

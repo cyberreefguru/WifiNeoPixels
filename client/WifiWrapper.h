@@ -26,6 +26,7 @@ public:
 
 	void waitForConfig();
 	WiFiClient& getWifiClient();
+	uint8_t connected();
 	void work();
 
 protected:

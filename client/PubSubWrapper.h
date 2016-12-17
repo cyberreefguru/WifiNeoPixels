@@ -26,6 +26,7 @@ public:
 	uint8_t connect();
 	uint8_t disconnect();
 	uint8_t checkConnection();
+	uint8_t connected();
 
 	void work();
 	void publish(char *channel);

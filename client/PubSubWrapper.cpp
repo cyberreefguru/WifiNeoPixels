@@ -142,6 +142,11 @@ uint8_t PubSubWrapper::disconnect()
 	return flag;
 }
 
+uint8_t PubSubWrapper::connected()
+{
+	return pubsub.connected();
+}
+
 /**
  * Checks if we still have a valid connection to the server.
  * If there is no connection, an attempt will be made.

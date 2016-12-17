@@ -104,6 +104,14 @@ void setup()
 	// Set LED variables
 	setStatus(STATUS_WAITING);
 
+	Serial.println(F("**Statistics**"));
+	Serial.print(F("Free Heap - "));
+	Serial.println(ESP.getFreeHeap() );
+	Serial.print(F("Sketch Size - "));
+	Serial.println(ESP.getSketchSize() );
+	Serial.print(F("Free Space - "));
+	Serial.println(ESP.getFreeSketchSpace() );
+
     Serial.println(F("** Initialization Complete **"));
 
 }
@@ -125,13 +133,6 @@ void loop()
 		parseCommand();
 	}
 
-	// check if we are connected to mqtt server
-	if( !pubsubw.checkConnection() )
-	{
-		// If we lost the connection to the queue toggle the LED as a warning to the user
-		// We can't do anything other than try to connect or have the user reconfigure
-		Helper::error(STATUS_ERROR_QUEUE);
-	}
 
 	// Check if user wants to configure node
 	if( Serial.available() )
@@ -253,6 +254,28 @@ void worker()
 	wifiw.work(); // check for OTA
 	yield(); // give time to ESP
 	ESP.wdtFeed(); // pump watch dog
+
+
+	// check if we are connected to mqtt server
+	if( pubsubw.connected() )
+	{
+		statusIndicator.setQueueStatus( STATUS_COLOR_OK );
+	}
+	else
+	{
+		statusIndicator.setQueueStatus( STATUS_COLOR_FAIL );
+		pubsubw.connect();
+	}
+
+	if( wifiw.connected() )
+	{
+		statusIndicator.setWifiStatus( STATUS_COLOR_OK );
+	}
+	else
+	{
+		statusIndicator.setWifiStatus( STATUS_COLOR_FAIL );
+	}
+
 }
 
 
