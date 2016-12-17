@@ -10,6 +10,8 @@
 
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
+#include <ArduinoOTA.h>
+
 
 #include "ClientGlobal.h"
 #include "Configuration.h"
@@ -24,6 +26,7 @@ public:
 
 	void waitForConfig();
 	WiFiClient& getWifiClient();
+	void work();
 
 protected:
 	WiFiClient wifi;

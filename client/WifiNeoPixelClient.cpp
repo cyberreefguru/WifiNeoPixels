@@ -250,6 +250,7 @@ boolean initialize()
 void worker()
 {
 	pubsubw.work(); // process queue
+	wifiw.work(); // check for OTA
 	yield(); // give time to ESP
 	ESP.wdtFeed(); // pump watch dog
 }
