@@ -24,20 +24,30 @@
 #define MY_COLOR_CORRECTION	TypicalPixelString
 //#define MY_COLOR_CORRECTION	TypicalLEDStrip
 
-#define STATUS_NONE				0
-#define STATUS_WAITING			1
-#define STATUS_PROCESSING		2
-#define STATUS_CONFIGURE		3
-#define STATUS_BOOTING			4
+// Status of the system
 
-#define STATUS_ERROR_BASE		10
-#define STATUS_ERROR_CONFIG		STATUS_ERROR_BASE+2
-#define STATUS_ERROR_QUEUE		STATUS_ERROR_BASE+3
-#define STATUS_ERROR_WIFI		STATUS_ERROR_BASE+4
-#define STATUS_ERROR_DRIVER		STATUS_ERROR_BASE+5
-#define STATUS_ERROR_GENERAL	STATUS_ERROR_BASE+6
 
-#define STATUS_RESET			50
+enum StatusEnum { Unknown=0, None, Booting, Waiting, Processing, Configuring, Uploading, Ok, Error, Reset };
+enum ComponentEnum {Config=0, Queue, Wifi, Driver, General };
+
+//#define STATUS_UNKNOWN			0
+//#define STATUS_NONE				1
+//#define STATUS_BOOTING			2
+//#define STATUS_WAITING			3
+//#define STATUS_PROCESSING		4
+//#define STATUS_CONFIGURING		5
+//#define STATUS_UPLOADING		6
+//#define STATUS_OK				7
+
+
+//#define STATUS_ERROR_BASE		10
+//#define STATUS_ERROR_CONFIG		STATUS_ERROR_BASE+2
+//#define STATUS_ERROR_QUEUE		STATUS_ERROR_BASE+3
+//#define STATUS_ERROR_WIFI		STATUS_ERROR_BASE+4
+//#define STATUS_ERROR_DRIVER		STATUS_ERROR_BASE+5
+//#define STATUS_ERROR_GENERAL	STATUS_ERROR_BASE+6
+
+//#define STATUS_RESET			50
 
 #ifdef __WITTY
 

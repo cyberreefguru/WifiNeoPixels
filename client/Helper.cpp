@@ -68,20 +68,11 @@ void Helper::dumpBuffer(uint8_t *buf, uint8_t len)
  * flashes LED based on error code received
  *
  */
-void Helper::error(uint8_t errorCode)
+void Helper::error()
 {
-	uint8_t i;
-	uint8_t count = errorCode-STATUS_ERROR_BASE; // compute the count from base error
-	setStatus(STATUS_NONE); // turn off interrupt LED flashing
-
 	while(1)
 	{
-		// Flash LED the number of times based on error code
-		for(i=0; i<count; i++)
-		{
-			Helper::toggleLedTimed(100);
-		}
-		Helper::delayYield( 500 );
+		Helper::toggleLedTimed(100);
 	}
 }
 

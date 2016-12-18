@@ -28,7 +28,7 @@ public:
 	static void workYield();
 	static void delayWorker(uint32_t time);
 	static void delayYield(uint32_t time);
-	static void error(uint8_t error);
+	static void error();
 	static void dumpBuffer(uint8_t *buf, uint8_t len);
 	static void toggleLedTimed(uint32_t time);
 	static void toggleLed();
@@ -51,8 +51,8 @@ extern "C"
 extern void worker();
 extern uint8_t isCommandAvailable();
 extern uint8_t commandDelay(uint32_t time);
-extern void setStatus(volatile uint8_t status);
-extern volatile uint8_t getStatus();
+extern void setStatus(volatile StatusEnum status);
+extern volatile StatusEnum getStatus();
 extern void yield();
 
 //extern volatile uint8_t gStatus;

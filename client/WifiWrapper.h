@@ -35,4 +35,18 @@ protected:
 
 };
 
+
+//end of add your includes here
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+extern void setStatus(volatile StatusEnum status);
+extern volatile StatusEnum getStatus();
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
+
 #endif /* WIFIWRAPPER_H_ */

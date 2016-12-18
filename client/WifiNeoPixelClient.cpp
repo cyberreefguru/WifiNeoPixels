@@ -15,7 +15,7 @@ static StatusIndicator statusIndicator;
 
 // software timer instance
 os_timer_t ledTimer;
-volatile uint8_t gStatus;
+volatile StatusEnum gStatus;
 volatile uint8_t gLedCounter;
 //volatile uint8_t gLedState;
 
@@ -36,6 +36,9 @@ void startupPause();
  */
 void setup()
 {
+	// Set global status as booting
+	setStatus(Booting);
+
 	// Configure serial port
 	Serial.begin(115200);
 	Serial.println(F("\n\rLED Controller Powered Up\n"));
@@ -53,19 +56,18 @@ void setup()
 	Serial.println( F("Configuring status LEDs...") );
 	if( statusIndicator.initialize() == 0 )
 	{
+		Serial.println( F("Error configuring status LEDs!") );
 		while(1)
 		{
-			Helper::toggleLed();
-			delay(100);
+			Helper::toggleLedTimed(50);
 		}
 	}
-	statusIndicator.setGeneralStatus(STATUS_COLOR_BOOTING);
+
+	// Set status LEDs to unknown - as we run code they will change to booting, then the actual status
+	statusIndicator.setStatuses(Unknown); // we manually set this in cases timer does not initialize
 
 	// Print status message
 	Serial.println( F("Configuring timers and watchdog...") );
-
-	// Set status
-	setStatus(STATUS_BOOTING);
 
 	// Setup and initiate internal timer
 	os_timer_setfn(&ledTimer, ledTimerCallback, NULL);
@@ -77,17 +79,18 @@ void setup()
 
 	// Initialize the configuration object; configs stored in Flash
 	Serial.println( F("Initializing configuration...") );
-	statusIndicator.setConfigStatus(STATUS_COLOR_BOOTING);
+	statusIndicator.setStatus(Config, Booting);
     if( config.initialize() )
     {
         Serial.println( F("\nConfiguration initialized.") );
-    	statusIndicator.setConfigStatus(STATUS_COLOR_OK);
+    	statusIndicator.setStatus(Config, Ok);
     }
     else
     {
     	Serial.println( F("\n**ERROR - failed to initialize configuration") );
-    	statusIndicator.setConfigStatus(STATUS_COLOR_FAIL);
-    	Helper::error(STATUS_ERROR_CONFIG); // never returns from here
+    	setStatus(Error);
+    	statusIndicator.setStatus(Config, Error);
+    	Helper::error(); // never returns from here
     }
 
     // Initialize menu
@@ -102,7 +105,7 @@ void setup()
 	}
 
 	// Set LED variables
-	setStatus(STATUS_WAITING);
+	setStatus(Waiting);
 
 	Serial.println(F("**Statistics**"));
 	Serial.print(F("Free Heap - "));
@@ -144,7 +147,7 @@ void loop()
 	if( configFlag == 1)
 	{
 		configFlag = 0;
-		setStatus(STATUS_CONFIGURE);
+		setStatus(Configuring);
 		configure();
 	}
 
@@ -160,7 +163,8 @@ void configure()
 		// NOTE: I could not get the device reboot reliably, so cycle the power
 		//       is the best option.  Even "reset" and "restart" don't work reliably.
 		Serial.println(F("\nUser Configuration Complete - please cycle power."));
-		Helper::error(STATUS_RESET);
+		setStatus(Reset);
+		Helper::error();
 	}
 	else
 	{
@@ -181,26 +185,26 @@ boolean initialize()
 	Serial.println(F("Configuring wifi..."));
 
 	// Initialize WIFI
-	statusIndicator.setWifiStatus(STATUS_COLOR_BOOTING);
+	statusIndicator.setStatus(Wifi, Booting);
 	if( wifiw.initialize(&config) )
 	{
-    	statusIndicator.setWifiStatus(STATUS_COLOR_OK);
+		statusIndicator.setStatus(Wifi, Ok);
 
 		Serial.println(F("Configuring queue..."));
 
 		// Initialize pubsub
-		statusIndicator.setQueueStatus(STATUS_COLOR_BOOTING);
+		statusIndicator.setStatus(Queue, Booting);
 		if( pubsubw.initialize(&config, &wifiw) )
 		{
-	    	statusIndicator.setQueueStatus(STATUS_COLOR_OK);
+			statusIndicator.setStatus(Queue, Ok);
 
 			Serial.println(F("Configuring leds..."));
 
 			// Initialize the LEDs
-			statusIndicator.setDriverStatus(STATUS_COLOR_BOOTING);
+			statusIndicator.setStatus(Driver, Booting);
 			if ( controller.initialize(config.getNumberLeds(), DEFAULT_INTENSITY) )
 			{
-		    	statusIndicator.setDriverStatus(STATUS_COLOR_OK);
+				statusIndicator.setStatus(Driver, Ok);
 
 				yield(); // give time to ESP
 				Serial.print(F("\nLED Controller initialized..."));
@@ -218,22 +222,19 @@ boolean initialize()
 			else
 			{
 				Serial.println(F("\nERROR - failed to configure LED module"));
-		    	statusIndicator.setDriverStatus(STATUS_COLOR_FAIL);
-				setStatus(STATUS_ERROR_DRIVER);
+				statusIndicator.setStatus(Driver, Error);
 			}
 		}
 		else
 		{
 			Serial.println(F("\nERROR - failed to configure queue"));
-	    	statusIndicator.setQueueStatus(STATUS_COLOR_FAIL);
-			setStatus(STATUS_ERROR_QUEUE);
+			statusIndicator.setStatus(Queue, Error);
 		}
 	}
 	else
 	{
 		Serial.println(F("\nERROR - failed to configure WIFI"));
-    	statusIndicator.setWifiStatus(STATUS_COLOR_FAIL);
-		setStatus(STATUS_ERROR_WIFI);
+		statusIndicator.setStatus(Wifi, Error);
 	}
 
 	return configured;
@@ -259,21 +260,21 @@ void worker()
 	// check if we are connected to mqtt server
 	if( pubsubw.connected() )
 	{
-		statusIndicator.setQueueStatus( STATUS_COLOR_OK );
+		statusIndicator.setStatus(Queue, Ok);
 	}
 	else
 	{
-		statusIndicator.setQueueStatus( STATUS_COLOR_FAIL );
+		statusIndicator.setStatus(Queue, Error);
 		pubsubw.connect();
 	}
 
 	if( wifiw.connected() )
 	{
-		statusIndicator.setWifiStatus( STATUS_COLOR_OK );
+		statusIndicator.setStatus(Wifi, Ok);
 	}
 	else
 	{
-		statusIndicator.setWifiStatus( STATUS_COLOR_FAIL );
+		statusIndicator.setStatus(Wifi, Error);
 	}
 
 }
@@ -289,7 +290,7 @@ void parseCommand()
 
 	// Reset command available flag
 	setCommandAvailable(false);
-	setStatus(STATUS_PROCESSING);
+	setStatus(Processing);
 
 #ifdef __DEBUG
 	Serial.print( millis() );
@@ -473,7 +474,7 @@ void parseCommand()
 	Serial.print( millis() );
 	Serial.println(F(" - Command Complete"));
 
-	setStatus(STATUS_WAITING);
+	setStatus(Waiting);
 }
 
 /**
@@ -549,85 +550,90 @@ void pubsubCallback(char* topic, byte* payload, unsigned int length)
 }
 
 /**
- * Software timer callback - toggles the LED
+ * Software timer callback - controls the general status LED
  *
- * Note: overly complicated but pleasing on the eyes ;)
- *
+ * Note: overly complicated but pleasing to the eyes ;)
  */
 void ledTimerCallback(void *pArg)
 {
 	gLedCounter += 1;
 
-	CRGB color;
-
-	// NOTE - do not use zero for the state select - it will always be at least 1
-	// since we increment the counter above
-
-	switch( gStatus )
+	if( gStatus == Error || gStatus == Reset )
 	{
-	case STATUS_NONE:
-		gLedCounter = 0;
-		break;
-	case STATUS_BOOTING:
-		gLedCounter = 0;
-		statusIndicator.setGeneralStatus(STATUS_COLOR_BOOTING);
-		break;
-	case STATUS_WAITING:
-		color = STATUS_COLOR_OK;
-		break;
-	case STATUS_PROCESSING:
-		color = STATUS_COLOR_PROCESSING;
-		break;
-	case STATUS_ERROR_GENERAL:
-	case STATUS_ERROR_QUEUE:
-	case STATUS_ERROR_WIFI:
-	case STATUS_ERROR_DRIVER:
-	case STATUS_ERROR_CONFIG:
-		Helper::toggleLed();
-		gLedCounter = 0;
-		break;
-	default:
-		break;
+		// Flash every other tick
+		switch( gLedCounter )
+		{
+		case 1:
+			statusIndicator.setGeneralStatus(gStatus);
+			break;
+		case 3:
+			statusIndicator.setGeneralStatus(None);
+			break;
+		case 5:
+			gLedCounter = 0;
+			break;
+		default:
+			statusIndicator.setGeneralStatus(gStatus);
+			break;
+		}
 	}
-
-	if( gStatus == STATUS_WAITING || gStatus == STATUS_PROCESSING )
+	else if( gStatus == Booting )
+	{
+		statusIndicator.setGeneralStatus(gStatus);
+		gLedCounter = 0;
+	}
+	else if( gStatus == Uploading )
+	{
+		// Flash every tick
+		switch( gLedCounter )
+		{
+		case 1:
+			statusIndicator.setGeneralStatus(gStatus);
+			break;
+		case 2:
+			statusIndicator.setGeneralStatus(None);
+			gLedCounter = 0;
+			break;
+		default:
+			statusIndicator.setGeneralStatus(gStatus);
+			break;
+		}
+	}
+	else
 	{
 		// Create heart beat - on 1 cycle, off 2 cycles, on 1 cycle, off 6 cycles
 		switch( gLedCounter )
 		{
 		case 1:
-			statusIndicator.setGeneralStatus(color);
+			statusIndicator.setGeneralStatus(gStatus);
 			break;
 		case 2:
-//			Helper::setLed(OFF);
-			statusIndicator.setGeneralStatus(STATUS_COLOR_NONE);
+			statusIndicator.setGeneralStatus(None);
 			break;
 		case 4:
-//			Helper::setLed(ON);
-			statusIndicator.setGeneralStatus(color);
+			statusIndicator.setGeneralStatus(gStatus);
 			break;
 		case 5:
-//			Helper::setLed(OFF);
-			statusIndicator.setGeneralStatus(STATUS_COLOR_NONE);
+			statusIndicator.setGeneralStatus(None);
 			break;
 		case 11:
 			gLedCounter = 0;
 			break;
 		default:
+			statusIndicator.setGeneralStatus(gStatus);
 			break;
 		}
-
 	}
 
 } // End of timerCallback
 
-void setStatus(volatile uint8_t status)
+void setStatus(volatile StatusEnum status)
 {
 	gStatus = status;
 	gLedCounter = 0;
 }
 
-volatile uint8_t getStatus()
+volatile StatusEnum getStatus()
 {
 	return gStatus;
 }

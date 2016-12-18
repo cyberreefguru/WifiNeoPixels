@@ -25,6 +25,7 @@
 #define ORANGE	CRGB::Orange
 #define PURPLE	CRGB::Purple
 #define PINK	CRGB::HotPink
+#define GREY	CRGB::Grey
 #define RAINBOW	CRGB::Black
 
 #define DOWN 	0

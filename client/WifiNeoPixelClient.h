@@ -30,8 +30,8 @@ boolean isCommandAvailable();
 void setCommandAvailable(boolean flag);
 uint8_t commandDelay(uint32_t time);
 
-void setStatus(volatile uint8_t status);
-volatile uint8_t getStatus();
+void setStatus(volatile StatusEnum status);
+volatile StatusEnum getStatus();
 
 void pubsubCallback(char* topic, byte* payload, unsigned int length);
 

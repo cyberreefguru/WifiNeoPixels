@@ -20,6 +20,7 @@ StatusIndicator::StatusIndicator()
 {
 	statusLeds = NULL;
 	intensity = STATUS_DEFAULT_INTENSITY;
+	setStatuses( Unknown );
 }
 
 
@@ -87,43 +88,75 @@ void StatusIndicator::show()
 	statusController->showLeds(intensity);
 }
 
-void StatusIndicator::setStatus(CRGB b)
+/**
+ * Sets status of all indicators
+ */
+void StatusIndicator::setStatuses(StatusEnum s)
 {
 	uint8_t i;
 
-	for(i=0; i<STATUS_LED_NUM; i++)
+	for(i=0; i<sizeof(ComponentEnum); i++)
 	{
-		statusLeds[i] = b;
+		statuses[i] = s;
 	}
-	show();
 }
 
-void StatusIndicator::setConfigStatus(CRGB b)
+void StatusIndicator::setConfigStatus(StatusEnum s)
 {
-	statusLeds[STATUS_CONFIG] = b;
-	show();
+	setStatus(Config, s);
 }
 
-void StatusIndicator::setQueueStatus(CRGB b)
+void StatusIndicator::setQueueStatus(StatusEnum s)
 {
-	statusLeds[STATUS_QUEUE] = b;
-	show();
+	setStatus(Queue, s);
 }
 
-void StatusIndicator::setWifiStatus(CRGB b)
+void StatusIndicator::setWifiStatus(StatusEnum s)
 {
-	statusLeds[STATUS_WIFI] = b;
-	show();
+	setStatus(Wifi, s);
 }
 
-void StatusIndicator::setDriverStatus(CRGB b)
+void StatusIndicator::setDriverStatus(StatusEnum s)
 {
-	statusLeds[STATUS_DRIVER] = b;
-	show();
+	setStatus(Driver, s);
 }
 
-void StatusIndicator::setGeneralStatus(CRGB b)
+void StatusIndicator::setGeneralStatus(StatusEnum s)
 {
-	statusLeds[STATUS_GENERAL] = b;
-	show();
+	setStatus(General, s);
+}
+
+void StatusIndicator::setStatus(ComponentEnum comp, StatusEnum s)
+{
+	switch(s)
+	{
+	case Unknown:
+		statusLeds[comp] = STATUS_COLOR_UNKNOWN;
+		break;
+	case None:
+		statusLeds[comp] = STATUS_COLOR_NONE;
+		break;
+	case Ok:
+		statusLeds[comp] = STATUS_COLOR_OK;
+		break;
+	case Waiting:
+		statusLeds[comp] = STATUS_COLOR_WAITING;
+		break;
+	case Processing:
+		statusLeds[comp] = STATUS_COLOR_PROCESSING;
+		break;
+	case Configuring:
+		statusLeds[comp] = STATUS_COLOR_CONFIGURING;
+		break;
+	case Booting:
+		statusLeds[comp] = STATUS_COLOR_BOOTING;
+		break;
+	case Uploading:
+		statusLeds[comp] = STATUS_COLOR_UPLOADING;
+		break;
+	case Error:
+		statusLeds[comp] = STATUS_COLOR_ERROR;
+		break;
+	}
+	statusController->showLeds(intensity);
 }

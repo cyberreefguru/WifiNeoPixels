@@ -127,6 +127,7 @@ uint8_t WifiWrapper::initialize()
 
 		ArduinoOTA.onStart([]() {
 			Serial.println("OTA Start");
+			setStatus(Uploading);
 		});
 
 		ArduinoOTA.onEnd([]() {
@@ -136,6 +137,7 @@ uint8_t WifiWrapper::initialize()
 
 		ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
 			Serial.printf("Progress: %u%%\r\n", (progress / (total / 100)));
+			// TODO - put LED flash here or call back
 		});
 
 		ArduinoOTA.onError([](ota_error_t error) {

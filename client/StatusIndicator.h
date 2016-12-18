@@ -18,20 +18,27 @@
 #define STATUS_LED_NUM				5
 #define STATUS_LED_PIN				5 // TODO set which pin!!
 
-#define STATUS_CONFIG				0
-#define STATUS_QUEUE				1
-#define STATUS_WIFI					2
-#define STATUS_DRIVER				3
-#define STATUS_GENERAL				4
+// Locations of specific LEDs within the array
+//#define STATUS_CONFIG				0
+//#define STATUS_QUEUE				1
+//#define STATUS_WIFI					2
+//#define STATUS_DRIVER				3
+//#define STATUS_GENERAL				4
 
+// Status colors associated with the general LED
 
+#define STATUS_COLOR_UNKNOWN		GREY
 #define	STATUS_COLOR_NONE			BLACK
-#define	STATUS_COLOR_OK				GREEN
-#define STATUS_COLOR_FAIL			RED
-#define STATUS_COLOR_UNKNOWN		CYAN
-#define STATUS_COLOR_PROCESSING		BLUE
 #define STATUS_COLOR_BOOTING		ORANGE
+#define	STATUS_COLOR_WAITING		GREEN
+#define STATUS_COLOR_PROCESSING		BLUE
 
+#define STATUS_COLOR_CONFIGURING	YELLOW
+#define STATUS_COLOR_UPLOADING		MAGENTA
+
+// Status colors associated with the specific LEDs
+#define	STATUS_COLOR_OK				GREEN
+#define STATUS_COLOR_ERROR			RED
 
 #define STATUS_CONTROLLER			NEOPIXEL
 #define STATUS_COLOR_ORDER			RGB
@@ -50,17 +57,19 @@ public:
 	void setIntensity(uint8_t i);
 	uint8_t getIntensity();
 
-	void setStatus(CRGB status);
+	void setStatuses(StatusEnum s);
 
-	void setConfigStatus(CRGB status);
-	void setQueueStatus(CRGB status);
-	void setWifiStatus(CRGB status);
-	void setDriverStatus(CRGB status);
-	void setGeneralStatus(CRGB status);
+	void setConfigStatus(StatusEnum s);
+	void setQueueStatus(StatusEnum s);
+	void setWifiStatus(StatusEnum s);
+	void setDriverStatus(StatusEnum s);
+	void setGeneralStatus(StatusEnum s);
+	void setStatus(ComponentEnum comp, StatusEnum s);
 
 protected:
 	CRGB *statusLeds;
 	uint8_t intensity;
+	StatusEnum statuses[sizeof(ComponentEnum)];
 
 	void show();
 
